@@ -276,12 +276,6 @@ npm run build
 4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
 5. Abre un Pull Request
 
-## 📞 Soporte
-
-Para soporte técnico o preguntas sobre el proyecto:
-- 📧 Email: soporte@parknow.com
-- 📱 WhatsApp: +57 300 123 4567
-- 🌐 Website: https://parknow.com
 
 ## 📄 Licencia
 
