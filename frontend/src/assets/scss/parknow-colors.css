@@ -1,0 +1,65 @@
+/* Colores empresariales ParkNow */
+:root {
+  --park-blue: rgb(152, 202, 229);
+  --park-cream: rgb(233, 229, 217);
+  --park-black: rgb(0, 0, 0);
+  
+  /* Variaciones de tonos */
+  --park-blue-light: rgba(152, 202, 229, 0.1);
+  --park-blue-medium: rgba(152, 202, 229, 0.8);
+  --park-blue-dark: rgb(120, 170, 200);
+  
+  --park-cream-light: rgba(233, 229, 217, 0.3);
+  --park-cream-medium: rgba(233, 229, 217, 0.8);
+  --park-cream-dark: rgb(210, 205, 190);
+}
+
+/* Clases utilitarias para los colores empresariales */
+.bg-park-blue {
+  background-color: var(--park-blue);
+}
+
+.bg-park-cream {
+  background-color: var(--park-cream);
+}
+
+.bg-park-black {
+  background-color: var(--park-black);
+}
+
+.text-park-blue {
+  color: var(--park-blue);
+}
+
+.text-park-cream {
+  color: var(--park-cream);
+}
+
+.text-park-black {
+  color: var(--park-black);
+}
+
+.border-park-blue {
+  border-color: var(--park-blue);
+}
+
+.border-park-cream {
+  border-color: var(--park-cream);
+}
+
+.hover\:bg-park-blue-dark:hover {
+  background-color: var(--park-blue-dark);
+}
+
+.focus\:ring-park-blue:focus {
+  --tw-ring-color: var(--park-blue);
+}
+
+/* Gradientes personalizados */
+.bg-gradient-park {
+  background: linear-gradient(135deg, var(--park-blue) 0%, var(--park-cream) 100%);
+}
+
+.bg-gradient-park-reverse {
+  background: linear-gradient(135deg, var(--park-cream) 0%, var(--park-blue) 100%);
+}

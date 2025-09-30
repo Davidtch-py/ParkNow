@@ -1,4 +1,4 @@
-import { Usuario } from './models.js';
+import { Usuario, sequelize } from './models.js';
 
 export class UsuarioRepository {
   async create(userData) {
@@ -10,7 +10,9 @@ export class UsuarioRepository {
   }
 
   async findByEmail(email) {
-    return await Usuario.findOne({ where: { email } });
+    return await Usuario.findOne({
+      where: { email }
+    });
   }
 
   async findAll() {

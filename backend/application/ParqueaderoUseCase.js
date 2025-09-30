@@ -42,7 +42,10 @@ export class ParqueaderoUseCase {
     try {
       const parqueaderos = await this.parqueaderoRepository.findAll();
       const alertas = parqueaderos
-        .filter(p => p.isCapacidadBaja(umbral))
+        .filter(p => {
+          const porcentajeDisponible = Math.round((p.capacidadDisponible / p.capacidadTotal) * 100);
+          return porcentajeDisponible <= umbral;
+        })
         .map(p => ({
           id: p.id,
           nombre: p.nombre,
@@ -53,7 +56,7 @@ export class ParqueaderoUseCase {
 
       return {
         success: true,
-        alertas
+        parqueaderos: alertas  // Cambié 'alertas' por 'parqueaderos' para que coincida con el frontend
       };
     } catch (error) {
       return {
