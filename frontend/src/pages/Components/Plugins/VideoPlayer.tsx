@@ -1,27 +1,22 @@
 import React from "react";
 import BreadCrumb from "Common/BreadCrumb";
-import Plyr, { APITypes } from "plyr-react";
-import "plyr-react/plyr.css";
 
 const videoId = "qYgogv4R8zg";
 const provider = "youtube";
 
 const VideoPlayer = () => {
-    const ref = React.useRef<APITypes>(null);
+    const embedUrl = `https://www.youtube.com/embed/${videoId}`;
 
     const plyrVideo =
         videoId && provider ? (
-            <Plyr
-                ref={ref}
-                source={{
-                    type: "video",
-                    sources: [
-                        {
-                            src: `https://www.youtube.com/embed/${videoId}`,
-                            provider: provider,
-                        },
-                    ],
-                }}
+            <iframe
+                src={embedUrl}
+                width="100%"
+                height="315"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title="YouTube video player"
             />
         ) : null;
 

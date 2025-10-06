@@ -18,7 +18,7 @@ const EditorClassic = () => {
                         <h6 className="mb-4 text-15">Classic CKEditor</h6>
                         <div className="ckeditor-classic text-slate-800">
                             <CKEditor
-                                editor={ClassicEditor}
+                                editor={ClassicEditor as any}
                                 data={`
                   <h3>The three greatest things you learn from traveling</h3>
                   <p><br data-cke-filler="true"></p>
