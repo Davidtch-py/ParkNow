@@ -9,7 +9,7 @@ const parqueaderoUseCase = new ParqueaderoUseCase(parqueaderoRepository, horario
 export class ParqueaderoController {
   async crear(req, res) {
     try {
-      const { nombre, direccion, capacidadTotal, latitud, longitud } = req.body;
+      const { nombre, direccion, capacidadTotal, ciudad } = req.body;
 
       if (!nombre || !direccion || !capacidadTotal) {
         return res.status(400).json({
@@ -22,12 +22,11 @@ export class ParqueaderoController {
         nombre,
         direccion,
         capacidadTotal,
-        latitud,
-        longitud
+        ciudad
       });
 
       if (result.success) {
-        res.status(201).json(result);
+          res.status(201).json(result);
       } else {
         res.status(400).json(result);
       }
