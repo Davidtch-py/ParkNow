@@ -209,6 +209,8 @@ import Pricing from "pages/Pages/Pricing";
 import Faqs from "pages/Pages/Faqs";
 import ContactUs from "pages/Pages/ContactUs";
 
+// Nuevo parqueadero
+import AgregarParqueadero from 'pages/NewParqueadero/AgregarParqueadero';
 import React from 'react';
 
 interface RouteObject {
@@ -225,6 +227,7 @@ const authProtectedRoutes: Array<RouteObject> = [
   { path: "/dashboards-email", component: Email },
   { path: "/dashboards-hr", component: HRDashboard },
   { path: "/dashboards-social", component: SocialMediaDashboard },
+  { path: "/parqueaderos", component: AgregarParqueadero },
 
   // Ui Element
   { path: "/ui-alerts", component: UiAlert },
