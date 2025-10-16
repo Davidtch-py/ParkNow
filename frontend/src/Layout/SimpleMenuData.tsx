@@ -1,4 +1,4 @@
-import { UserRound, Car, Clock, PieChart, Calendar, Settings, CreditCard } from "lucide-react";
+import { UserRound, Car, Clock, PieChart, Calendar, Settings, CreditCard, AlertTriangle } from "lucide-react";
 
 const simpleMenuData: any = [
   {
@@ -8,37 +8,43 @@ const simpleMenuData: any = [
   {
     id: "dashboard",
     label: 'Dashboard',
-    link: "/dashboard",
+    link: "/parknow-dashboard",
     icon: <PieChart />,
   },
   {
     id: "parqueaderos",
-    label: 'Parqueaderos',
+    label: 'Registrar Parqueadero',
     link: "/parqueaderos",
     icon: <Car />,
   },
   {
-    id: "entradas",
-    label: 'Registrar Entrada',
-    link: "/entradas",
+    id: "horarios",
+    label: 'Horarios de Atención',
+    link: "/parknow-horarios",
     icon: <Clock />,
   },
   {
-    id: "salidas",
-    label: 'Registrar Salida',
-    link: "/salidas",
+    id: "entradas-salidas",
+    label: 'Entradas y Salidas',
+    link: "/parknow-entradas-salidas",
     icon: <Clock />,
+  },
+  {
+    id: "alertas",
+    label: 'Alertas de Capacidad',
+    link: "/parknow-alertas",
+    icon: <AlertTriangle />,
   },
   {
     id: "reportes",
     label: 'Reportes',
-    link: "/reportes",
+    link: "/parknow-reportes",
     icon: <Calendar />,
   },
   {
     id: "tarifas",
-    label: 'Tarifas',
-    link: "/tarifas",
+    label: 'Gestión de Tarifas',
+    link: "/parknow-tarifas",
     icon: <CreditCard />,
   },
   {
@@ -50,12 +56,6 @@ const simpleMenuData: any = [
     label: 'Usuarios',
     link: "/usuarios",
     icon: <UserRound />,
-  },
-  {
-    id: "configuracion",
-    label: 'Configuración',
-    link: "/configuracion",
-    icon: <Settings />,
   },
 ];
 
