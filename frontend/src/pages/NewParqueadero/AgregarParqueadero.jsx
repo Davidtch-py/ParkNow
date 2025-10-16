@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { MapPin, Car, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Car, AlertTriangle, CheckCircle } from 'lucide-react';
 import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const AgregarParqueadero = () => {
@@ -16,13 +15,13 @@ const AgregarParqueadero = () => {
   //const { token } = useAuth(); // Asegúrate que useAuth devuelve el token
   const token = localStorage.getItem('token');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (!formData.ciudad) {

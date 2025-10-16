@@ -1,4 +1,4 @@
-import { UserRound, Car, Clock, PieChart, Calendar, Settings, CreditCard, AlertTriangle } from "lucide-react";
+import { UserRound, Car, Clock, PieChart, Calendar, CreditCard, AlertTriangle } from "lucide-react";
 
 const simpleMenuData: any = [
   {
