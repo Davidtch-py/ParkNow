@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft, Check, MapPin, Clock, Users, Car, Building, Calendar, PartyPopper } from 'lucide-react';
+import { MapPin, Building, Calendar, PartyPopper } from 'lucide-react';
 import { parqueaderoService } from '../services/index';
 import { toast } from 'react-toastify';
 

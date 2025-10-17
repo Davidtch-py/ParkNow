@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Eye, Trash2, Plus, MoreHorizontal, FileEdit, CheckCircle, X, UserCheck } from 'lucide-react';
-import { authService, usuarioService } from '../services/index';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Plus, Trash2, Pencil, Check, X, Shield, User, Mail, Phone, CheckCircle, UserCheck, FileEdit } from 'lucide-react';
+import { usuarioService } from '../services/index';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 

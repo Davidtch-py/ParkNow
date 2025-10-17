@@ -1,19 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Calendar, 
-  Download, 
-  FileText, 
-  Filter,
-  Car, 
-  Clock, 
-  User, 
-  MapPin,
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Download,
+  FileText,
+  Calendar,
+  Car,
+  Search,
   DollarSign,
-  ChevronDown,
+  Clock,
+  User,
+  MapPin,
   Eye,
   Printer,
-  TrendingUp,
   X
 } from 'lucide-react';
 import { reporteService, parqueaderoService } from '../services/index';
@@ -24,6 +21,7 @@ interface Reporte {
   id: number;
   tipo: 'diario' | 'semanal' | 'mensual' | 'personalizado';
   titulo: string;
+  descripcion?: string;
   fechaInicio: string;
   fechaFin: string;
   parqueaderoId?: number;
@@ -59,7 +57,7 @@ const ReportesListView = () => {
   const [mostrarDetalle, setMostrarDetalle] = useState(false);
   const [generandoReporte, setGenerandoReporte] = useState(false);
 
-  const { user } = useAuth();
+  // const { user } = useAuth();
 
   const [filtros, setFiltros] = useState<FiltrosReporte>({
     fechaInicio: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // hace 30 días
@@ -72,13 +70,24 @@ const ReportesListView = () => {
 
   const [busqueda, setBusqueda] = useState('');
 
+  const aplicarFiltros = useCallback(() => {
+    let resultado = reportes;
+    if (busqueda) {
+      resultado = resultado.filter(r => 
+        r.titulo.toLowerCase().includes(busqueda.toLowerCase()) ||
+        r.descripcion?.toLowerCase().includes(busqueda.toLowerCase())
+      );
+    }
+    setReportesFiltrados(resultado);
+  }, [reportes, busqueda]);
+
   useEffect(() => {
     cargarDatos();
   }, []);
 
   useEffect(() => {
     aplicarFiltros();
-  }, [reportes, filtros, busqueda]);
+  }, [aplicarFiltros]);
 
   const cargarDatos = async () => {
     try {
@@ -161,55 +170,6 @@ const ReportesListView = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const aplicarFiltros = () => {
-    let reportesFiltrados = [...reportes];
-
-    // Filtro por búsqueda
-    if (busqueda) {
-      reportesFiltrados = reportesFiltrados.filter(reporte =>
-        reporte.titulo.toLowerCase().includes(busqueda.toLowerCase()) ||
-        reporte.parqueaderoNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        reporte.controlador?.toLowerCase().includes(busqueda.toLowerCase())
-      );
-    }
-
-    // Filtro por fecha
-    if (filtros.fechaInicio) {
-      reportesFiltrados = reportesFiltrados.filter(reporte =>
-        reporte.fechaInicio >= filtros.fechaInicio
-      );
-    }
-
-    if (filtros.fechaFin) {
-      reportesFiltrados = reportesFiltrados.filter(reporte =>
-        reporte.fechaFin <= filtros.fechaFin
-      );
-    }
-
-    // Filtro por parqueadero
-    if (filtros.parqueaderoId) {
-      reportesFiltrados = reportesFiltrados.filter(reporte =>
-        reporte.parqueaderoId?.toString() === filtros.parqueaderoId
-      );
-    }
-
-    // Filtro por controlador
-    if (filtros.controlador) {
-      reportesFiltrados = reportesFiltrados.filter(reporte =>
-        reporte.controlador?.toLowerCase().includes(filtros.controlador.toLowerCase())
-      );
-    }
-
-    // Filtro por tipo de reporte
-    if (filtros.tipoReporte !== 'todos') {
-      reportesFiltrados = reportesFiltrados.filter(reporte =>
-        reporte.tipo === filtros.tipoReporte
-      );
-    }
-
-    setReportesFiltrados(reportesFiltrados);
   };
 
   const generarNuevoReporte = async () => {
