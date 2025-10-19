@@ -1,5 +1,5 @@
 import React from "react";
-import AuthIcon from "pages/AuthenticationInner/AuthIcon";
+import AuthIcon from "./AuthIcon";
 import { useDispatch, useSelector } from "react-redux";
 import { registerUser, resetRegisterFlag } from "slices/thunk";
 import { createSelector } from 'reselect';

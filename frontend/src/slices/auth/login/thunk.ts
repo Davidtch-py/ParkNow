@@ -1,9 +1,12 @@
-import { postFakeLogin } from "helpers/fakebackend_helper";
 import { loginError, loginSuccess, logoutSuccess } from "./reducer";
 import { ThunkAction } from "redux-thunk";
 import { Action, Dispatch } from "redux";
 import { RootState } from "slices";
-import { getFirebaseBackend } from "helpers/firebase_helper";
+
+// Mock login function - replace with real API call
+const postFakeLogin = async (data: any) => {
+    return Promise.resolve({ user: data, token: 'mock-token' });
+};
 
 interface User {
     email: string;
@@ -25,14 +28,8 @@ export const loginUser = (
 
             localStorage.setItem("authUser", JSON.stringify(response));
 
-        } else if (process.env.REACT_APP_DEFAULTAUTH === "firebase") {
-            let fireBaseBackend = await getFirebaseBackend();
-
-            response = await fireBaseBackend.loginUser(
-                user.email,
-                user.password
-            )
         }
+        // Firebase auth removed - add your own auth implementation here
 
         if (response) {
             dispatch(loginSuccess(response));
@@ -47,15 +44,7 @@ export const loginUser = (
 export const logoutUser = () => async (dispatch: Dispatch) => {
     try {
         localStorage.removeItem("authUser");
-
-        let fireBaseBackend = await getFirebaseBackend();
-
-        if (process.env.REACT_APP_DEFAULTAUTH === "firebase") {
-            const response = fireBaseBackend.logout;
-            dispatch(logoutSuccess(response));
-        } else {
-            dispatch(logoutSuccess(true));
-        }
+        dispatch(logoutSuccess(true));
     } catch (error) {
         dispatch(loginError(error));
     }
@@ -64,21 +53,8 @@ export const logoutUser = () => async (dispatch: Dispatch) => {
 
 export const socialLogin = (type: any, history: any) => async (dispatch: any) => {
     try {
-        let response: any;
-
-        if (process.env.REACT_APP_DEFAULTAUTH === "firebase") {
-            const fireBaseBackend = getFirebaseBackend();
-            response = fireBaseBackend.socialLoginUser(type);
-        }
-
-        const socialData = await response;
-
-        if (socialData) {
-            sessionStorage.setItem("authUser", JSON.stringify(socialData));
-            dispatch(loginSuccess(socialData));
-            history('/dashboard');
-        }
-
+        // Social login removed - implement your own social auth here
+        dispatch(loginError("Social login not implemented"));
     } catch (error) {
         dispatch(loginError(error));
     }

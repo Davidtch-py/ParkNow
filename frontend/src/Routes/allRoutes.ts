@@ -11,9 +11,6 @@ import LoginBoxedParkNow from "views/LoginBoxed";
 import UsuariosSimple from "views/UsuariosSimple";
 import TestComponent from "views/TestComponent";
 
-// ParkNow Pages - Páginas específicas que necesitamos mantener
-import AgregarParqueadero from 'pages/NewParqueadero/AgregarParqueadero';
-
 // Componentes UI básicos necesarios
 import UiButtons from "pages/Components/UIElement/UiButtons";
 import UiModal from "pages/Components/UIElement/Modal";
@@ -74,7 +71,7 @@ const authProtectedRoutes: Array<RouteObject> = [
   { path: "/parknow-entradas-salidas", component: RegistroEntradaSalida },
   { path: "/parknow-reportes", component: ReportesListView },
   { path: "/parknow-tarifas", component: GestionTarifas },
-  { path: "/parqueaderos", component: AgregarParqueadero },
+  // Nota: /parqueaderos ahora usa ParqueaderoWizard en /parknow-parqueaderos
 
   // Componente de prueba para diagnosticar problemas
   { path: "/test", component: TestComponent },

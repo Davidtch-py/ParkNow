@@ -20,12 +20,13 @@ import { createSelector } from 'reselect';
 import * as Yup from "yup";
 import { useFormik } from "formik";
 
-import {
-    getUserGrid as onGetUserGrid,
-    addUserGrid as onAddUserGrid,
-    updateUserGrid as onUpdateUserGrid,
-    deleteUserGrid as onDeleteUserGrid
-} from 'slices/thunk';
+// NOTE: This file is not used in ParkNow - we use UsuariosListView.tsx instead
+// Mock functions to allow compilation
+const onGetUserGrid = () => ({ type: 'MOCK' });
+const onAddUserGrid = (data: any) => ({ type: 'MOCK', payload: data });
+const onUpdateUserGrid = (data: any) => ({ type: 'MOCK', payload: data });
+const onDeleteUserGrid = (id: any) => ({ type: 'MOCK', payload: id });
+
 import { ToastContainer } from 'react-toastify';
 
 import filterDataBySearch from 'Common/filterDataBySearch';
