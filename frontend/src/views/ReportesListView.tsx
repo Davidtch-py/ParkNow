@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { reporteService, parqueaderoService } from '../services/index';
 import { toast } from 'react-toastify';
-import { useAuth } from '../context/AuthContext';
 
 interface Reporte {
   id: number;

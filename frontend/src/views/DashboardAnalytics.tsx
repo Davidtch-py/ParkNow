@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import CountUp from 'react-countup';
 import { parqueaderoService, entradaService } from '../services/index';
-import { useAuth } from '../context/AuthContext';
 
 interface DashboardStats {
   espaciosTotales: number;

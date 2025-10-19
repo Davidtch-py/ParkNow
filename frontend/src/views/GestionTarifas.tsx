@@ -14,7 +14,6 @@ import {
 import CountUp from 'react-countup';
 import { tarifaService, parqueaderoService } from '../services/index';
 import { toast } from 'react-toastify';
-import { useAuth } from '../context/AuthContext';
 
 interface Tarifa {
   id: number;
