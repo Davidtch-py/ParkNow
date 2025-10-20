@@ -184,11 +184,10 @@ const Horario = sequelize.define('Horario', {
     }
   },
   diaSemana: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(20),
     allowNull: false,
     validate: {
-      min: 0,
-      max: 6
+      isIn: [['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO', 'FESTIVO']]
     }
   },
   horaApertura: {
@@ -203,6 +202,11 @@ const Horario = sequelize.define('Horario', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true
+  },
+  esFestivo: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 }, {
   tableName: 'horarios',

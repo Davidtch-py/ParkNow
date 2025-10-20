@@ -63,6 +63,7 @@ const authProtectedRoutes: Array<RouteObject> = [
   { path: "/dashboard", component: DashboardAnalytics },
   { path: "/parknow-dashboard", component: DashboardAnalytics },
   { path: "/parknow-parqueaderos", component: ParqueaderoWizard },
+  { path: "/parqueaderos", component: ParqueaderoWizard },
   { path: "/parknow-usuarios", component: UsuariosListView },
   { path: "/usuarios", component: UsuariosListView },
   { path: "/usuarios-simple", component: UsuariosSimple },

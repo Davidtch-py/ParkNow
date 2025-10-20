@@ -6,6 +6,7 @@ import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
 import rootReducer from './slices';
+import { MQTTProvider } from './contexts/MQTTContext';
 import './assets/scss/parknow-colors.css';
 
 const root = ReactDOM.createRoot(
@@ -16,7 +17,9 @@ root.render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter basename={process.env.PUBLIC_URL}>
-        <App />
+        <MQTTProvider>
+          <App />
+        </MQTTProvider>
       </BrowserRouter>
     </Provider>
   </React.StrictMode>

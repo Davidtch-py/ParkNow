@@ -4,6 +4,7 @@ import RouteIndex from 'Routes/Index';
 import { AuthProvider } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useMQTTNotifications } from './hooks/useMQTTNotifications';
 
 // import fakeBackend from "./helpers/AuthType/fakeBackend";
 
@@ -28,6 +29,9 @@ import 'react-toastify/dist/ReactToastify.css';
 // initFirebaseBackend(firebaseConfig);
 
 function App() {
+  // Activar notificaciones MQTT globales
+  useMQTTNotifications();
+
   return (
     <AuthProvider>
       <RouteIndex />

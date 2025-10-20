@@ -1,9 +1,10 @@
 import React from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import { authProtectedRoutes, publicRoutes } from './allRoutes';
 import SimpleLayout from 'Layout/SimpleLayout';
 import NonAuthLayout from "Layout/NonLayout"
 import AuthProtected from './AuthProtected';
+import NotFound from '../pages/NotFound';
 
 const RouteIndex = () => {
   return (
@@ -32,6 +33,9 @@ const RouteIndex = () => {
               </NonAuthLayout>
             } />
         ))}
+        
+        {/* Ruta 404 - Debe estar al final */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </React.Fragment>
   );

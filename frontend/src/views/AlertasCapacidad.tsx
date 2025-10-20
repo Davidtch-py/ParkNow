@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, Bell, BellRing, CheckCircle, X, Settings, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { parqueaderoService } from '../services/index';
+import { useMQTT } from '../contexts/MQTTContext';
 
 interface AlertaCapacidad {
   id: number;
@@ -25,6 +27,7 @@ interface ConfiguracionAlertas {
 }
 
 const AlertasCapacidad = () => {
+  const { subscribe, unsubscribe, isConnected, publish } = useMQTT();
   const [alertas, setAlertas] = useState<AlertaCapacidad[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -43,64 +46,85 @@ const AlertasCapacidad = () => {
     try {
       setLoading(true);
 
-      // Simular datos de alertas
-      const alertasMock: AlertaCapacidad[] = [
-        {
-          id: 1,
-          parqueaderoId: 1,
-          nombreParqueadero: 'Parqueadero Central',
-          direccion: 'Calle 100 #15-30',
-          capacidadTotal: 200,
-          capacidadDisponible: 8,
-          porcentajeOcupado: 96,
-          nivel: 'critico',
-          fechaAlerta: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-          leida: false
-        },
-        {
-          id: 2,
-          parqueaderoId: 2,
-          nombreParqueadero: 'Plaza Norte',
-          direccion: 'Carrera 45 #80-20',
-          capacidadTotal: 150,
-          capacidadDisponible: 22,
-          porcentajeOcupado: 85,
-          nivel: 'alto',
-          fechaAlerta: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-          leida: true
-        },
-        {
-          id: 3,
-          parqueaderoId: 3,
-          nombreParqueadero: 'Centro Comercial',
-          direccion: 'Avenida 68 #32-15',
-          capacidadTotal: 300,
-          capacidadDisponible: 75,
-          porcentajeOcupado: 75,
-          nivel: 'medio',
-          fechaAlerta: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-          leida: false
-        }
-      ];
+      // Obtener parqueaderos con capacidad baja desde el backend
+      const response = await parqueaderoService.getCapacidadBaja(configuracion.umbralMedio);
+      
+      if (response.success && response.parqueaderos) {
+        setAlertas(prevAlertas => {
+          const alertasNuevas: AlertaCapacidad[] = response.parqueaderos.map((p: any) => {
+            const porcentajeOcupado = Math.round(((p.capacidad_total - p.capacidad_disponible) / p.capacidad_total) * 100);
+            
+            let nivel: 'critico' | 'alto' | 'medio' = 'medio';
+            if (porcentajeOcupado >= configuracion.umbralCritico) {
+              nivel = 'critico';
+            } else if (porcentajeOcupado >= configuracion.umbralAlto) {
+              nivel = 'alto';
+            }
 
-      setAlertas(alertasMock);
+            // Buscar si ya existe esta alerta en el estado anterior
+            const alertaExistente = prevAlertas.find(a => a.parqueaderoId === p.id);
 
-      // Notificaciones para alertas críticas nuevas
-      const alertasCriticasNuevas = alertasMock.filter(alerta =>
-        alerta.nivel === 'critico' && !alerta.leida
-      );
+            return {
+              id: p.id,
+              parqueaderoId: p.id,
+              nombreParqueadero: p.nombre,
+              direccion: p.direccion,
+              capacidadTotal: p.capacidad_total,
+              capacidadDisponible: p.capacidad_disponible,
+              porcentajeOcupado,
+              nivel,
+              fechaAlerta: alertaExistente?.fechaAlerta || new Date().toISOString(),
+              leida: alertaExistente?.leida || false
+            };
+          });
 
-      if (alertasCriticasNuevas.length > 0 && configuracion.notificacionesActivas) {
-        toast.error(`¡${alertasCriticasNuevas.length} parqueadero(s) con capacidad crítica!`);
+          // Notificaciones para alertas críticas nuevas
+          const alertasCriticasNuevas = alertasNuevas.filter(alerta =>
+            alerta.nivel === 'critico' && !alerta.leida
+          );
+
+          if (alertasCriticasNuevas.length > 0 && configuracion.notificacionesActivas) {
+            toast.error(`¡${alertasCriticasNuevas.length} parqueadero(s) con capacidad crítica!`, {
+              autoClose: false
+            });
+            
+            if (configuracion.sonidoActivo) {
+              // Reproducir sonido de alerta
+              const audio = new Audio('/notification.mp3');
+              audio.play().catch(() => {});
+            }
+          }
+
+          return alertasNuevas;
+        });
       }
 
     } catch (error) {
+      console.error('Error cargando alertas:', error);
       toast.error('Error cargando alertas de capacidad');
     } finally {
       setLoading(false);
     }
-  }, [configuracion.notificacionesActivas]);
+  }, [configuracion]);
 
+  // Suscribirse a notificaciones MQTT de capacidad
+  useEffect(() => {
+    if (isConnected) {
+      subscribe('parknow/notificaciones/capacidad', (notification) => {
+        if (notification.type === 'CAPACIDAD_BAJA') {
+          console.log('📨 Alerta de capacidad recibida:', notification);
+          // Recargar alertas cuando llega una notificación
+          cargarAlertas();
+        }
+      });
+
+      return () => {
+        unsubscribe('parknow/notificaciones/capacidad');
+      };
+    }
+  }, [isConnected, subscribe, unsubscribe, cargarAlertas]);
+
+  // Cargar alertas periódicamente
   useEffect(() => {
     cargarAlertas();
     const interval = setInterval(cargarAlertas, configuracion.intervaloActualizacion * 60 * 1000);
@@ -121,6 +145,64 @@ const AlertasCapacidad = () => {
   const eliminarAlerta = (alertaId: number) => {
     setAlertas(alertas.filter(alerta => alerta.id !== alertaId));
     toast.success('Alerta eliminada');
+  };
+
+  // 🧪 FUNCIÓN DE PRUEBA: Simular alerta de capacidad baja
+  const simularAlertaCapacidad = async () => {
+    try {
+      // Obtener todos los parqueaderos
+      const response = await parqueaderoService.getAll();
+      if (response.success && response.parqueaderos && response.parqueaderos.length > 0) {
+        // Seleccionar un parqueadero al azar
+        const parqueaderoAleatorio = response.parqueaderos[Math.floor(Math.random() * response.parqueaderos.length)];
+        
+        // Simular capacidad baja (5% disponible)
+        const capacidadSimulada = Math.floor(parqueaderoAleatorio.capacidad_total * 0.05);
+        const porcentajeDisponible = 5;
+        
+        // Crear notificación simulada
+        const notificacionSimulada = {
+          type: 'CAPACIDAD_BAJA',
+          timestamp: new Date().toISOString(),
+          parqueadero: {
+            id: parqueaderoAleatorio.id,
+            nombre: parqueaderoAleatorio.nombre,
+            capacidadDisponible: capacidadSimulada,
+            capacidadTotal: parqueaderoAleatorio.capacidad_total,
+            porcentaje: porcentajeDisponible
+          },
+          message: `[SIMULACIÓN] El parqueadero ${parqueaderoAleatorio.nombre} tiene baja capacidad disponible`
+        };
+
+        // Publicar en MQTT para que todos los clientes conectados la reciban
+        if (isConnected) {
+          publish('parknow/notificaciones/capacidad', notificacionSimulada);
+          
+          toast.success(`🧪 Alerta simulada enviada: ${parqueaderoAleatorio.nombre} (${porcentajeDisponible}% disponible)`, {
+            autoClose: 3000
+          });
+        } else {
+          toast.warning('MQTT no está conectado. Solo se mostrará localmente.');
+          
+          // Mostrar notificación local
+          toast.error(
+            `🚨 [SIMULACIÓN] Capacidad Crítica: ${parqueaderoAleatorio.nombre} - ${porcentajeDisponible}% disponible`,
+            {
+              autoClose: false,
+              position: 'top-right'
+            }
+          );
+        }
+        
+        // Recargar alertas
+        await cargarAlertas();
+      } else {
+        toast.error('No hay parqueaderos disponibles para simular');
+      }
+    } catch (error) {
+      console.error('Error simulando alerta:', error);
+      toast.error('Error al simular alerta');
+    }
   };
 
   const obtenerColorNivel = (nivel: string) => {
@@ -173,6 +255,17 @@ const AlertasCapacidad = () => {
             <RefreshCw className={`size-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </button>
+          
+          {/* 🧪 BOTÓN DE PRUEBA TEMPORAL */}
+          <button
+            onClick={simularAlertaCapacidad}
+            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 border-2 border-purple-400"
+            title="Simular alerta de capacidad baja para pruebas MQTT"
+          >
+            <Bell className="size-4 mr-2" />
+            🧪 Simular Alerta
+          </button>
+          
           <button
             onClick={() => setShowSettings(true)}
             className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
