@@ -9,12 +9,20 @@ Configura estas variables en Vercel Dashboard → Tu Proyecto → Settings → E
 #### Production:
 ```
 REACT_APP_API_URL=https://parknow-backend.onrender.com/api
+REACT_APP_MQTT_URL=wss://tu-cluster.s2.eu.hivemq.cloud:8884/mqtt
+REACT_APP_MQTT_USERNAME=parknow_user
+REACT_APP_MQTT_PASSWORD=tu_password_segura
 ```
 
 #### Preview/Development:
 ```
 REACT_APP_API_URL=https://parknow-backend-staging.onrender.com/api
+REACT_APP_MQTT_URL=wss://tu-cluster.s2.eu.hivemq.cloud:8884/mqtt
+REACT_APP_MQTT_USERNAME=parknow_user
+REACT_APP_MQTT_PASSWORD=tu_password_segura
 ```
+
+**Nota:** Ver `MQTT_SETUP.md` para instrucciones detalladas de configuración del broker MQTT gratuito.
 
 ### Backend (Render)
 

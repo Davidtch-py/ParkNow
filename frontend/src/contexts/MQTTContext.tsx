@@ -89,13 +89,26 @@ export const MQTTProvider: React.FC<MQTTProviderProps> = ({ children }) => {
 
   useEffect(() => {
     try {
-      console.log('🔌 Conectando a MQTT...');
+      // Obtener configuración MQTT desde variables de entorno o API
+      const mqttUrl = process.env.REACT_APP_MQTT_URL || 'ws://localhost:8883';
+      const mqttUsername = process.env.REACT_APP_MQTT_USERNAME;
+      const mqttPassword = process.env.REACT_APP_MQTT_PASSWORD;
       
-      const mqttClient = mqtt.connect('ws://localhost:8883', {
+      console.log('🔌 Conectando a MQTT:', mqttUrl);
+      
+      const mqttOptions: any = {
         reconnectPeriod: 5000,
-        connectTimeout: 3000,
+        connectTimeout: 10000,
         clientId: `parknow_web_${Math.random().toString(16).slice(2, 10)}`,
-      });
+      };
+      
+      // Agregar credenciales si están disponibles
+      if (mqttUsername && mqttPassword) {
+        mqttOptions.username = mqttUsername;
+        mqttOptions.password = mqttPassword;
+      }
+      
+      const mqttClient = mqtt.connect(mqttUrl, mqttOptions);
 
       mqttClient.on('connect', () => {
         console.log('✅ Conectado a MQTT Broker');

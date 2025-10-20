@@ -5,6 +5,7 @@ import { sequelize, Usuario, Parqueadero, Vehiculo, Tarifa, Horario, Entrada } f
 import { authMiddleware, adminMiddleware } from './infrastructure/authMiddleware.js';
 import { errorHandler, notFoundHandler } from './infrastructure/errorHandler.js';
 import { mqttService } from './infrastructure/mqttService.js';
+import { mqttClientService } from './infrastructure/mqttClientService.js';
 
 // Importar controladores
 import { AuthController } from './presentation/AuthController.js';
