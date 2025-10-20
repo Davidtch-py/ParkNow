@@ -4,6 +4,13 @@
   "outputDirectory": "frontend/build",
   "framework": "create-react-app",
   "installCommand": "cd frontend && npm install --legacy-peer-deps",
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "develop": true
+    }
+  },
+  "ignoreCommand": "bash vercel-ignore-build.sh",
   "rewrites": [
     {
       "source": "/(.*)",

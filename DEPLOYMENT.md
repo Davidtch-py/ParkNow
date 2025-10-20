@@ -60,9 +60,13 @@ Configura estos secrets en GitHub → Settings → Secrets and variables → Act
 ### 2. Frontend en Vercel
 
 1. Importar proyecto desde GitHub
-2. Configurar Root Directory: `frontend`
-3. Configurar variables de entorno
-4. Deploy automático
+2. **NO configurar Root Directory** (dejar en blanco, el script lo maneja)
+3. Configurar variables de entorno:
+   - `REACT_APP_API_URL=https://parknow-backend.onrender.com/api`
+4. En **Settings** → **Git**:
+   - Ignored Build Step: `bash vercel-ignore-build.sh`
+   - Esto evitará deploys innecesarios cuando solo cambien archivos del backend
+5. Deploy automático solo cuando cambien archivos del frontend
 
 ### 3. GitHub Actions
 
