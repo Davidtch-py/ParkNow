@@ -8,6 +8,9 @@ let sequelize;
 
 if (process.env.DATABASE_URL) {
   // Usar DATABASE_URL si está disponible (producción en Render)
+  console.log('🔍 Usando DATABASE_URL para conexión');
+  console.log('📍 DATABASE_URL (primeros 50 caracteres):', process.env.DATABASE_URL.substring(0, 50) + '...');
+  
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
@@ -25,6 +28,9 @@ if (process.env.DATABASE_URL) {
     }
   });
 } else {
+  console.log('🔍 Usando variables individuales para conexión');
+  console.log('📍 DB_HOST:', process.env.DB_HOST || 'localhost');
+  console.log('📍 DB_NAME:', process.env.DB_NAME || 'parqueadero_db');
   // Usar variables individuales (desarrollo local)
   sequelize = new Sequelize(
     process.env.DB_NAME || 'parqueadero_db',
