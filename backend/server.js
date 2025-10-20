@@ -68,6 +68,14 @@ const parqueaderoUsuarioController = new ParqueaderoUsuarioController();
 const festivoController = new FestivoController();
 const notificacionController = new NotificacionController();
 
+// Health check endpoint para Render
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Ruta raíz
 app.get('/', (req, res) => {
   res.json({
