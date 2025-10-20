@@ -67,7 +67,7 @@ MQTT_BROKER_URL=wss://tu-cluster.s2.eu.hivemq.cloud:8884/mqtt
 ### 1. Crear cuenta
 
 1. Ve a https://www.emqx.com/en/cloud
-2. Crea una cuenta
+2. Crea una cuenta.
 3. Click **Create Deployment**
 4. Selecciona **Serverless** (Gratis hasta 1M mensajes/mes)
 
