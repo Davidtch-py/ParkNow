@@ -30,7 +30,7 @@ jobs:
       
       - name: Install Frontend Dependencies
         working-directory: ./frontend
-        run: npm ci --prefer-offline --no-audit
+        run: npm ci --prefer-offline --no-audit --legacy-peer-deps
       
       - name: Install Backend Dependencies
         working-directory: ./backend
@@ -63,7 +63,7 @@ jobs:
       
       - name: Install Dependencies
         working-directory: ./frontend
-        run: npm ci --prefer-offline --no-audit
+        run: npm ci --prefer-offline --no-audit --legacy-peer-deps
       
       - name: Build Frontend
         working-directory: ./frontend
@@ -113,8 +113,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment:
-      name: staging
     
     steps:
       - name: Checkout code

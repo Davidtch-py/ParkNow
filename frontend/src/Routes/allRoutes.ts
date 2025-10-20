@@ -36,7 +36,7 @@ import BasicTable from "pages/Components/Table/Basic";
 import ReactDataTable from "pages/Components/Table/ReactTable";
 
 // Mapas (específicamente requeridos)
-import MapsGoogle from "pages/Components/MapsGoogle";
+// import MapsGoogle from "pages/Components/MapsGoogle"; // Deshabilitado: incompatible con React 18
 import MapsLeaflet from "pages/Components/MapsLeaflet";
 
 // Páginas básicas que existen
@@ -102,7 +102,7 @@ const authProtectedRoutes: Array<RouteObject> = [
   { path: "/tables-datatable", component: ReactDataTable },
 
   // Mapas (requeridos específicamente)
-  { path: "/maps-google", component: MapsGoogle },
+  // { path: "/maps-google", component: MapsGoogle }, // Deshabilitado: incompatible con React 18
   { path: "/maps-leaflet", component: MapsLeaflet },
 
   // Páginas útiles que pueden servir para features adicionales
