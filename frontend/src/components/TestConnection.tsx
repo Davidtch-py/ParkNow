@@ -10,8 +10,9 @@ const TestConnection: React.FC = () => {
     setTestResult('Probando conexión...');
     
     try {
-      // Hacer una petición directa a la API
-      const response = await fetch('http://localhost:3000');
+      // Hacer una petición directa a la API usando la variable de entorno
+      const apiUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:3000';
+      const response = await fetch(apiUrl);
       const data = await response.json();
       
       if (data.success) {
