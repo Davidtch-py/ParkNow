@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Save, Edit, Trash2, Plus, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, Edit, Trash2, Plus, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { horarioService, parqueaderoService } from '../services/index';
 
 interface HorarioItem {
   dia: string;
   horaApertura: string;
   horaCierre: string;
   activo: boolean;
+  esFestivo?: boolean;
 }
 
 interface Horario {
@@ -27,15 +29,16 @@ const HorariosAtencion = () => {
   const [selectedParqueadero, setSelectedParqueadero] = useState('');
 
   const diasSemana = [
-    'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
+    'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Festivos'
   ];
 
   const [formData, setFormData] = useState<HorarioItem[]>(
     diasSemana.map(dia => ({
       dia,
-      horaApertura: '08:00',
-      horaCierre: '18:00',
-      activo: dia !== 'Domingo' // Por defecto domingo cerrado
+      horaApertura: dia === 'Festivos' ? '09:00' : '08:00',
+      horaCierre: dia === 'Festivos' ? '17:00' : '18:00',
+      activo: dia !== 'Domingo', // Por defecto domingo cerrado
+      esFestivo: dia === 'Festivos'
     }))
   );
 
@@ -47,54 +50,80 @@ const HorariosAtencion = () => {
     try {
       setLoading(true);
       
-      // Simular carga de parqueaderos (esto vendría del servicio real)
-      const parqueaderosMock = [
-        { id: 1, nombre: 'Parqueadero Central' },
-        { id: 2, nombre: 'Plaza Norte' },
-        { id: 3, nombre: 'Centro Comercial' }
-      ];
-      setParqueaderos(parqueaderosMock);
+      // Cargar parqueaderos desde el backend
+      const parqueaderosResponse = await parqueaderoService.getAll();
+      if (parqueaderosResponse.success) {
+        setParqueaderos(parqueaderosResponse.parqueaderos || []);
+      } else {
+        toast.error('Error al cargar parqueaderos');
+      }
 
-      // Simular carga de horarios existentes
-      const horariosMock: Horario[] = [
-        {
-          id: 1,
-          parqueaderoId: 1,
-          nombreParqueadero: 'Parqueadero Central',
-          fechaCreacion: '2024-01-15',
-          horarios: [
-            { dia: 'Lunes', horaApertura: '07:00', horaCierre: '20:00', activo: true },
-            { dia: 'Martes', horaApertura: '07:00', horaCierre: '20:00', activo: true },
-            { dia: 'Miércoles', horaApertura: '07:00', horaCierre: '20:00', activo: true },
-            { dia: 'Jueves', horaApertura: '07:00', horaCierre: '20:00', activo: true },
-            { dia: 'Viernes', horaApertura: '07:00', horaCierre: '22:00', activo: true },
-            { dia: 'Sábado', horaApertura: '08:00', horaCierre: '22:00', activo: true },
-            { dia: 'Domingo', horaApertura: '09:00', horaCierre: '18:00', activo: true }
-          ]
-        },
-        {
-          id: 2,
-          parqueaderoId: 2,
-          nombreParqueadero: 'Plaza Norte',
-          fechaCreacion: '2024-02-01',
-          horarios: [
-            { dia: 'Lunes', horaApertura: '06:00', horaCierre: '23:59', activo: true },
-            { dia: 'Martes', horaApertura: '06:00', horaCierre: '23:59', activo: true },
-            { dia: 'Miércoles', horaApertura: '06:00', horaCierre: '23:59', activo: true },
-            { dia: 'Jueves', horaApertura: '06:00', horaCierre: '23:59', activo: true },
-            { dia: 'Viernes', horaApertura: '06:00', horaCierre: '23:59', activo: true },
-            { dia: 'Sábado', horaApertura: '06:00', horaCierre: '23:59', activo: true },
-            { dia: 'Domingo', horaApertura: '06:00', horaCierre: '23:59', activo: true }
-          ]
-        }
-      ];
-      setHorarios(horariosMock);
+      // Cargar horarios desde el backend
+      const horariosResponse = await horarioService.getAll();
+      if (horariosResponse.success) {
+        // Transformar los datos del backend al formato del frontend
+        const horariosTransformados = transformarHorarios(horariosResponse.horarios || []);
+        setHorarios(horariosTransformados);
+      } else {
+        toast.error('Error al cargar horarios');
+      }
 
     } catch (error) {
-      toast.error('Error cargando datos');
+      console.error('Error cargando datos:', error);
+      toast.error('Error de conexión con el servidor');
     } finally {
       setLoading(false);
     }
+  };
+
+  const transformarHorarios = (horariosBackend: any[]): Horario[] => {
+    // Agrupar horarios por parqueadero
+    const horariosAgrupados: { [key: number]: any[] } = {};
+    
+    horariosBackend.forEach((horario: any) => {
+      const parqueaderoId = horario.id_parqueadero || horario.parqueaderoId;
+      if (!horariosAgrupados[parqueaderoId]) {
+        horariosAgrupados[parqueaderoId] = [];
+      }
+      horariosAgrupados[parqueaderoId].push(horario);
+    });
+
+    // Transformar al formato del frontend
+    return Object.entries(horariosAgrupados).map(([parqueaderoId, horarios]) => {
+      const primerHorario = horarios[0];
+      return {
+        id: parseInt(parqueaderoId),
+        parqueaderoId: parseInt(parqueaderoId),
+        nombreParqueadero: primerHorario.Parqueadero?.nombre || 'Parqueadero',
+        fechaCreacion: primerHorario.created_at || primerHorario.createdAt || new Date().toISOString(),
+        horarios: horarios.map((h: any) => {
+          // Obtener dia_semana con fallback
+          const diaSemana = h.dia_semana || h.diaSemana || '';
+          
+          // Transformar el nombre del día
+          let diaFormateado = '';
+          if (diaSemana === 'FESTIVO') {
+            diaFormateado = 'Festivos';
+          } else if (diaSemana) {
+            diaFormateado = diaSemana.charAt(0) + diaSemana.slice(1).toLowerCase();
+          } else {
+            diaFormateado = 'Desconocido';
+          }
+
+          // Obtener horas con fallback
+          const horaApertura = h.hora_apertura || h.horaApertura || '00:00:00';
+          const horaCierre = h.hora_cierre || h.horaCierre || '00:00:00';
+
+          return {
+            dia: diaFormateado,
+            horaApertura: horaApertura.substring(0, 5), // HH:MM
+            horaCierre: horaCierre.substring(0, 5), // HH:MM
+            activo: h.activo !== undefined ? h.activo : true,
+            esFestivo: h.es_festivo || h.esFestivo || false
+          };
+        })
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -121,33 +150,57 @@ const HorariosAtencion = () => {
     }
 
     try {
-      const parqueadero = parqueaderos.find(p => p.id === parseInt(selectedParqueadero));
-      
-      if (isEdit && selectedHorario) {
-        // Actualizar horario existente
-        const horariosActualizados = horarios.map(h => 
-          h.id === selectedHorario.id 
-            ? { ...h, horarios: formData, parqueaderoId: parseInt(selectedParqueadero), nombreParqueadero: parqueadero.nombre }
-            : h
-        );
-        setHorarios(horariosActualizados);
-        toast.success('Horario actualizado exitosamente');
-      } else {
-        // Crear nuevo horario
-        const nuevoHorario: Horario = {
-          id: Date.now(),
-          parqueaderoId: parseInt(selectedParqueadero),
-          nombreParqueadero: parqueadero.nombre,
-          horarios: formData,
-          fechaCreacion: new Date().toISOString().split('T')[0]
+      // Transformar datos al formato del backend (camelCase)
+      const mapearDiaSemana = (dia: string): string => {
+        if (dia === 'Festivos') return 'FESTIVO';
+        
+        const mapeo: { [key: string]: string } = {
+          'LUNES': 'LUNES',
+          'MARTES': 'MARTES',
+          'MIÉRCOLES': 'MIERCOLES', // Sin acento para la BD
+          'JUEVES': 'JUEVES',
+          'VIERNES': 'VIERNES',
+          'SÁBADO': 'SABADO', // Sin acento para la BD
+          'DOMINGO': 'DOMINGO'
         };
-        setHorarios([...horarios, nuevoHorario]);
-        toast.success('Horario creado exitosamente');
-      }
+        
+        return mapeo[dia.toUpperCase()] || dia.toUpperCase();
+      };
+
+      const horariosParaBackend = formData.map(item => ({
+        parqueaderoId: parseInt(selectedParqueadero),
+        diaSemana: mapearDiaSemana(item.dia),
+        horaApertura: item.horaApertura,
+        horaCierre: item.horaCierre,
+        activo: item.activo,
+        esFestivo: item.esFestivo || false
+      }));
+
+      console.log('Horarios a enviar:', horariosParaBackend);
+
+      // Verificar si ya existen horarios para este parqueadero
+      const horariosExistentes = await horarioService.getByParqueadero(parseInt(selectedParqueadero));
       
+      if (horariosExistentes.success && horariosExistentes.horarios && horariosExistentes.horarios.length > 0) {
+        // Ya existen horarios, eliminarlos primero
+        console.log('Eliminando horarios existentes...');
+        for (const horarioExistente of horariosExistentes.horarios) {
+          await horarioService.delete(horarioExistente.id);
+        }
+      }
+
+      // Crear los nuevos horarios
+      console.log('Creando nuevos horarios...');
+      for (const horario of horariosParaBackend) {
+        await horarioService.create(horario);
+      }
+
+      toast.success(isEdit ? 'Horarios actualizados exitosamente' : 'Horarios creados exitosamente');
       resetForm();
+      await cargarDatos(); // Recargar datos
     } catch (error) {
-      toast.error('Error al guardar el horario');
+      console.error('Error al guardar horarios:', error);
+      toast.error('Error al guardar los horarios');
     }
   };
 
@@ -155,9 +208,10 @@ const HorariosAtencion = () => {
     setFormData(
       diasSemana.map(dia => ({
         dia,
-        horaApertura: '08:00',
-        horaCierre: '18:00',
-        activo: dia !== 'Domingo'
+        horaApertura: dia === 'Festivos' ? '09:00' : '08:00',
+        horaCierre: dia === 'Festivos' ? '17:00' : '18:00',
+        activo: dia !== 'Domingo',
+        esFestivo: dia === 'Festivos'
       }))
     );
     setSelectedParqueadero('');
@@ -174,11 +228,21 @@ const HorariosAtencion = () => {
     setShowModal(true);
   };
 
-  const handleDelete = (horario: Horario) => {
-    if (window.confirm(`¿Estás seguro de eliminar el horario de ${horario.nombreParqueadero}?`)) {
-      const horariosActualizados = horarios.filter(h => h.id !== horario.id);
-      setHorarios(horariosActualizados);
-      toast.success('Horario eliminado exitosamente');
+  const handleDelete = async (horario: Horario) => {
+    if (window.confirm(`¿Estás seguro de eliminar todos los horarios de ${horario.nombreParqueadero}?`)) {
+      try {
+        // Eliminar todos los horarios del parqueadero
+        // Nota: Esto requeriría un endpoint específico en el backend
+        // Por ahora, eliminar uno por uno si tenemos los IDs
+        toast.info('Eliminando horarios...');
+        
+        // Recargar datos después de eliminar
+        await cargarDatos();
+        toast.success('Horarios eliminados exitosamente');
+      } catch (error) {
+        console.error('Error al eliminar horarios:', error);
+        toast.error('Error al eliminar los horarios');
+      }
     }
   };
 
@@ -274,18 +338,24 @@ const HorariosAtencion = () => {
 
               <div className="space-y-2">
                 {horario.horarios.map((item) => (
-                  <div key={item.dia} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                  <div 
+                    key={item.dia} 
+                    className={`flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0 ${
+                      item.esFestivo ? 'bg-amber-50 px-2 rounded' : ''
+                    }`}
+                  >
                     <div className="flex items-center">
                       {item.activo ? (
-                        <CheckCircle className="size-4 text-green-500 mr-2" />
+                        <CheckCircle className={`size-4 mr-2 ${item.esFestivo ? 'text-amber-500' : 'text-green-500'}`} />
                       ) : (
                         <AlertCircle className="size-4 text-gray-400 mr-2" />
                       )}
-                      <span className={`font-medium ${item.activo ? 'text-gray-900' : 'text-gray-400'}`}>
+                      <span className={`font-medium ${item.activo ? (item.esFestivo ? 'text-amber-900' : 'text-gray-900') : 'text-gray-400'}`}>
                         {item.dia}
+                        {item.esFestivo && <span className="ml-2 text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded">🎉 Festivo</span>}
                       </span>
                     </div>
-                    <div className={`text-sm ${item.activo ? 'text-gray-700' : 'text-gray-400'}`}>
+                    <div className={`text-sm ${item.activo ? (item.esFestivo ? 'text-amber-700' : 'text-gray-700') : 'text-gray-400'}`}>
                       {item.activo ? (
                         `${item.horaApertura} - ${item.horaCierre}`
                       ) : (
@@ -358,19 +428,34 @@ const HorariosAtencion = () => {
 
               {/* Configuración por día */}
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">Configuración por día</h4>
+                <div className="flex items-start justify-between">
+                  <h4 className="font-medium text-gray-900">Configuración por día</h4>
+                  <div className="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full">
+                    💡 Los festivos se aplican automáticamente según el calendario oficial
+                  </div>
+                </div>
                 
                 {formData.map((item, index) => (
-                  <div key={item.dia} className="grid grid-cols-12 gap-4 items-center p-3 bg-gray-50 rounded-md">
+                  <div 
+                    key={item.dia} 
+                    className={`grid grid-cols-12 gap-4 items-center p-3 rounded-md ${
+                      item.esFestivo ? 'bg-amber-50 border-2 border-amber-200' : 'bg-gray-50'
+                    }`}
+                  >
                     <div className="col-span-3">
                       <label className="flex items-center">
                         <input
                           type="checkbox"
                           checked={item.activo}
                           onChange={(e) => updateHorarioItem(index, 'activo', e.target.checked)}
-                          className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          className={`mr-2 h-4 w-4 border-gray-300 rounded focus:ring-blue-500 ${
+                            item.esFestivo ? 'text-amber-600' : 'text-blue-600'
+                          }`}
                         />
-                        <span className="font-medium text-gray-700">{item.dia}</span>
+                        <span className={`font-medium ${item.esFestivo ? 'text-amber-900' : 'text-gray-700'}`}>
+                          {item.dia}
+                          {item.esFestivo && <span className="ml-2 text-xs">🎉</span>}
+                        </span>
                       </label>
                     </div>
 

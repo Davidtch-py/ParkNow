@@ -12,7 +12,7 @@ import { loginUser, socialLogin } from "slices/thunk";
 import { useDispatch, useSelector } from "react-redux";
 import withRouter from "Common/withRouter";
 import { createSelector } from 'reselect';
-import AuthIcon from "pages/AuthenticationInner/AuthIcon";
+import AuthIcon from "./AuthIcon";
 import { Link } from "react-router-dom";
 
 const Login = (props: any) => {

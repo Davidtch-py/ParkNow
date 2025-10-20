@@ -1,286 +1,361 @@
 # 🚗 ParkNow - Sistema de Gestión de Parqueaderos
 
-ParkNow es un sistema completo de gestión de parqueaderos desarrollado con Node.js, Express, React y PostgreSQL, siguiendo una arquitectura en capas robusta y escalable.
+Sistema completo de gestión de parqueaderos con notificaciones en tiempo real (MQTT), autenticación JWT, gestión de horarios con festivos y arquitectura en capas.
 
 ## 📋 Características Principales
 
-- ✅ **Gestión de Parqueaderos**: CRUD completo con información de capacidad y ubicación
-- ✅ **Control de Entradas y Salidas**: Registro en tiempo real con cálculo automático de tarifas
-- ✅ **Sistema de Usuarios**: Autenticación JWT con roles (admin/controlador)
-- ✅ **Alertas de Capacidad**: Notificaciones cuando la ocupación es alta
-- ✅ **Reportes Avanzados**: Por fecha, tipo de vehículo y controlador
-- ✅ **Gestión de Tarifas**: Tarifas planas configurables por tipo de vehículo
-- ✅ **Dashboard en Tiempo Real**: Visualización del estado actual del sistema
+### Gestión Completa
+- ✅ **CRUD de Parqueaderos** con validación GPS y mapas
+- ✅ **Gestión de Usuarios** (Admin/Controlador) con JWT
+- ✅ **Horarios de Atención** por día + festivos automáticos
+- ✅ **Entradas/Salidas** con cálculo automático de tarifas
+- ✅ **Espacios Disponibles** en tiempo real
+- ✅ **Reportes Avanzados** por fecha, tipo y controlador
 
-## 🏗️ Arquitectura en Capas
+### Notificaciones en Tiempo Real
+- 🔔 **MQTT WebSocket** para notificaciones instantáneas
+- 🚨 **Alertas de Capacidad** cuando ocupación > 75%
+- 📊 **Dashboard en Tiempo Real** con métricas actualizadas
+- 🎯 **Notificaciones por Rol** (Admin ve todo, Controlador solo sus parqueaderos)
 
-El proyecto sigue el patrón de arquitectura en capas para garantizar separación de responsabilidades y facilidad de mantenimiento:
+### Validaciones y UX
+- 📍 **Validación GPS** (-90 a 90 lat, -180 a 180 lon)
+- 🗓️ **Festivos Automáticos** desde API de Colombia
+- 🎨 **UI Moderna** con TailwindCSS y componentes reutilizables
+- 📱 **Responsive** (Desktop, Tablet, Mobile)
+- 🔄 **Página 404** con redirección automática
+
+## 🏗️ Arquitectura
 
 ```
 ┌─────────────────────────────────────────┐
-│            User Interface               │ ← React Frontend
-├─────────────────────────────────────────┤
-│            Presentation                 │ ← Express Controllers
-├─────────────────────────────────────────┤
-│            Application                  │ ← Use Cases & Business Logic
-├─────────────────────────────────────────┤
-│            Domain Model                 │ ← Entities & Domain Rules
-├─────────────────────────────────────────┤
-│            Persistence                  │ ← Sequelize Repositories
-├─────────────────────────────────────────┤
-│               Data                      │ ← PostgreSQL Database
+│         Frontend (React + Vite)         │
+│  - Dashboard, Alertas, Horarios, etc.   │
+│  - Context MQTT global                  │
+│  - Auth Context (JWT)                   │
+└──────────────┬──────────────────────────┘
+               │ HTTP + WebSocket
+┌──────────────▼──────────────────────────┐
+│       Backend (Node.js + Express)       │
+│  - Controllers (Presentation)           │
+│  - Use Cases (Application)              │
+│  - Repositories (Persistence)           │
+│  - MQTT Broker (Aedes)                  │
+└──────────────┬──────────────────────────┘
+               │ Sequelize ORM
+┌──────────────▼──────────────────────────┐
+│         PostgreSQL Database             │
+│  - Parqueaderos, Usuarios, Horarios     │
+│  - Entradas, Salidas, Reportes          │
 └─────────────────────────────────────────┘
 ```
 
-### Estructura del Proyecto
-
-```
-parqueadero-app/
-├── backend/                    # API Node.js + Express
-│   ├── domain/                # Entidades de dominio
-│   ├── application/           # Casos de uso
-│   ├── presentation/          # Controladores Express
-│   ├── persistence/           # Repositorios Sequelize
-│   ├── infrastructure/        # Middleware y configuración
-│   ├── package.json
-│   └── server.js             # Punto de entrada del servidor
-├── frontend/                  # Aplicación React
-│   ├── src/
-│   │   ├── components/       # Componentes reutilizables
-│   │   ├── views/           # Páginas principales
-│   │   ├── services/        # Servicios API
-│   │   ├── context/         # Context API (Auth)
-│   │   └── main.jsx         # Punto de entrada React
-│   ├── package.json
-│   └── vite.config.js
-├── database/                  # Scripts SQL
-│   ├── init.sql              # Creación de tablas
-│   └── seeds.sql             # Datos de prueba
-└── docs/                     # Documentación
-    ├── historias_usuario.md
-    └── README.md
-```
-
-## 🚀 Instalación y Configuración
+## 🚀 Inicio Rápido
 
 ### Prerrequisitos
-
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL 12+
 - npm o yarn
 
-### 1. Configurar la Base de Datos
+### 1. Clonar e Instalar
 
 ```bash
-# Crear base de datos PostgreSQL
-createdb parqueadero_db
+git clone <repo-url>
+cd ParkNow
 
-# Ejecutar scripts de inicialización
-psql -d parqueadero_db -f database/init.sql
-psql -d parqueadero_db -f database/seeds.sql
-```
-
-### 2. Configurar Backend
-
-```bash
-# Navegar al directorio backend
+# Backend
 cd backend
-
-# Instalar dependencias
 npm install
+cp .env.example .env  # Configurar variables
 
-# Configurar variables de entorno
-cp .env.example .env
-
-# Editar .env con tu configuración:
-# DB_HOST=localhost
-# DB_PORT=5432
-# DB_NAME=parqueadero_db
-# DB_USER=tu_usuario
-# DB_PASSWORD=tu_password
-# JWT_SECRET=tu_secreto_jwt
-
-# Iniciar servidor de desarrollo
-npm run dev
+# Frontend
+cd ../frontend
+npm install
 ```
 
-El servidor backend estará disponible en `http://localhost:3000`
-
-### 3. Configurar Frontend
+### 2. Base de Datos
 
 ```bash
-# Navegar al directorio frontend
-cd frontend
-
-# Instalar dependencias
-npm install
-
-# Iniciar servidor de desarrollo
-npm run dev
+createdb parknow_db
+psql -d parknow_db -f database/init.sql
 ```
 
-El frontend estará disponible en `http://localhost:5173`
+### 3. Iniciar Servicios
 
-## 🔑 Credenciales de Prueba
+```bash
+# Terminal 1: Backend (puerto 3000)
+cd backend
+npm run dev
 
-### Administrador
-- **Email**: `admin@parqueadero.com`
-- **Contraseña**: `secret`
-- **Permisos**: Acceso completo al sistema
+# Terminal 2: Frontend (puerto 3001)
+cd frontend
+npm start
+```
 
-### Controlador
-- **Email**: `juan.perez@parqueadero.com`
-- **Contraseña**: `secret`
-- **Permisos**: Registro de entradas/salidas y reportes
+### 4. Acceder
 
-## 📊 Funcionalidades por Rol
+- **Frontend**: http://localhost:3001
+- **Backend API**: http://localhost:3000/api
+- **MQTT WebSocket**: ws://localhost:8883
+
+### 5. Credenciales de Prueba
+
+**Admin:**
+- Email: `admin@parqueadero.com`
+- Password: `secret`
+
+**Controlador:**
+- Email: `juan.perez@parqueadero.com`
+- Password: `secret`
+
+## 📦 Estructura del Proyecto
+
+```
+ParkNow/
+├── backend/
+│   ├── application/          # Casos de uso
+│   ├── domain/              # Entidades de dominio
+│   ├── infrastructure/      # MQTT, Festivos API
+│   ├── persistence/         # Repositorios Sequelize
+│   ├── presentation/        # Controladores Express
+│   └── server.js           # Punto de entrada
+├── frontend/
+│   ├── src/
+│   │   ├── components/     # Componentes reutilizables
+│   │   ├── contexts/       # Auth + MQTT Context
+│   │   ├── hooks/          # Custom hooks
+│   │   ├── services/       # API clients
+│   │   └── views/          # Páginas principales
+│   └── package.json
+├── database/
+│   └── init.sql           # Schema + seeds
+├── docs/
+│   ├── deployment/        # Guías de despliegue
+│   └── development/       # Docs técnicas
+└── .github/workflows/     # CI/CD
+```
+
+## 🛠️ Stack Tecnológico
+
+### Backend
+- **Node.js** + **Express.js** - API REST
+- **Sequelize** - ORM para PostgreSQL
+- **Aedes** - Broker MQTT embebido
+- **JWT** - Autenticación sin estado
+- **bcryptjs** - Hash de contraseñas
+
+### Frontend
+- **React 18** - UI Library
+- **React Router** - Enrutamiento
+- **MQTT.js** - Cliente MQTT
+- **Axios** - HTTP Client
+- **Lucide React** - Iconos
+- **React Toastify** - Notificaciones
+
+### Base de Datos
+- **PostgreSQL** - RDBMS
+- **Triggers** - Lógica de negocio
+- **Constraints** - Integridad referencial
+
+## 🔑 Funcionalidades por Rol
 
 ### 👨‍💼 Administrador
-- ✅ Gestión completa de parqueaderos
+- ✅ CRUD completo de parqueaderos
 - ✅ Gestión de usuarios y controladores
-- ✅ Configuración de tarifas
-- ✅ Acceso a todos los reportes
-- ✅ Dashboard completo
+- ✅ Configuración de horarios y tarifas
+- ✅ Alertas de capacidad (todas)
+- ✅ Reportes completos
+- ✅ Dashboard global
 
 ### 👨‍🔧 Controlador
-- ✅ Registro de entradas de vehículos
-- ✅ Registro de salidas y cobros
+- ✅ Registro de entradas/salidas
 - ✅ Visualización de espacios disponibles
+- ✅ Alertas de sus parqueaderos
 - ✅ Reportes de su actividad
 - ✅ Dashboard operativo
 
-## 🛠️ Tecnologías Utilizadas
+## 🔔 Sistema de Notificaciones MQTT
 
-### Backend
-- **Node.js** - Runtime de JavaScript
-- **Express.js** - Framework web
-- **Sequelize** - ORM para PostgreSQL
-- **PostgreSQL** - Base de datos relacional
-- **JWT** - Autenticación sin estado
-- **bcryptjs** - Hash de contraseñas
-- **cors** - Políticas de origen cruzado
-- **dotenv** - Variables de entorno
+### Topics
+- `parknow/notificaciones/capacidad` - Alertas de capacidad
+- `parknow/notificaciones/entradas` - Entradas de vehículos
+- `parknow/notificaciones/salidas` - Salidas de vehículos
+- `parknow/parqueadero/{id}/capacidad` - Por parqueadero
 
-### Frontend
-- **React 18** - Librería de UI
-- **Vite** - Build tool y servidor de desarrollo
-- **React Router** - Enrutamiento
-- **Axios** - Cliente HTTP
-- **Lucide React** - Iconos
-- **CSS3** - Estilos responsive
+### Flujo
+1. Usuario registra entrada → Backend actualiza capacidad
+2. Si capacidad < 25% → Backend publica en MQTT
+3. Todos los clientes conectados reciben notificación
+4. Toast aparece según rol (Admin: rojo, Controlador: amarillo)
 
-### Base de Datos
-- **PostgreSQL** - RDBMS principal
-- **Triggers** - Lógica de negocio a nivel DB
-- **Índices** - Optimización de consultas
-- **Constraints** - Integridad de datos
+### Configuración Frontend
+```typescript
+// Ya configurado en App.tsx
+import { MQTTProvider } from './contexts/MQTTContext';
+import { useMQTTNotifications } from './hooks/useMQTTNotifications';
 
-## 🔄 API Endpoints
+// Envuelve la app con MQTTProvider
+<MQTTProvider>
+  <App />
+</MQTTProvider>
+
+// Usa el hook en componentes
+useMQTTNotifications(); // Auto-suscribe según rol
+```
+
+## 📡 API Endpoints
 
 ### Autenticación
 - `POST /api/auth/login` - Iniciar sesión
-- `POST /api/auth/register` - Registrar usuario
-- `GET /api/auth/profile` - Obtener perfil
+- `GET /api/auth/profile` - Perfil del usuario
 
 ### Parqueaderos
-- `GET /api/parqueaderos` - Listar parqueaderos
-- `POST /api/parqueaderos` - Crear parqueadero (admin)
-- `PUT /api/parqueaderos/:id` - Actualizar parqueadero (admin)
-- `DELETE /api/parqueaderos/:id` - Eliminar parqueadero (admin)
-- `GET /api/parqueaderos/alertas/capacidad-baja` - Alertas
+- `GET /api/parqueaderos` - Listar todos
+- `POST /api/parqueaderos` - Crear (admin)
+- `PUT /api/parqueaderos/:id` - Actualizar (admin)
+- `DELETE /api/parqueaderos/:id` - Eliminar (admin)
+- `GET /api/parqueaderos/alertas/capacidad-baja?umbral=75` - Alertas
 
-### Entradas
+### Horarios
+- `GET /api/horarios` - Listar todos
+- `GET /api/horarios/parqueadero/:id` - Por parqueadero
+- `POST /api/horarios` - Crear
+- `DELETE /api/horarios/:id` - Eliminar
+
+### Festivos
+- `GET /api/festivos` - Listar festivos del año
+- `GET /api/festivos/:year` - Festivos de un año específico
+
+### Entradas/Salidas
 - `POST /api/entradas` - Registrar entrada
-- `GET /api/entradas` - Listar entradas
-- `GET /api/entradas/parqueadero/:id/activas` - Entradas activas
-
-### Salidas
 - `POST /api/salidas` - Registrar salida
-- `GET /api/salidas` - Listar salidas
+- `GET /api/entradas/parqueadero/:id/activas` - Activas
 
 ### Reportes
-- `GET /api/reportes/fecha` - Reporte por fecha
-- `GET /api/reportes/tipo-vehiculo` - Reporte por tipo
-- `GET /api/reportes/controlador` - Reporte por controlador
+- `GET /api/reportes/fecha?inicio=YYYY-MM-DD&fin=YYYY-MM-DD`
+- `GET /api/reportes/tipo-vehiculo?tipo=carro`
+- `GET /api/reportes/controlador/:id`
 
-## 📈 Datos de Prueba
+## 🚀 Despliegue (CI/CD)
 
-El sistema incluye datos de prueba que permiten explorar todas las funcionalidades:
+### Servicios Gratuitos
+- **Frontend**: Vercel (ilimitado)
+- **Backend + MQTT**: Render.com ($0/mes)
+- **PostgreSQL**: Render.com (incluido)
+- **CI/CD**: GitHub Actions (2000 min/mes)
 
-- **4 Parqueaderos** con diferentes capacidades y ubicaciones
-- **8 Vehículos** de diferentes tipos (carros, motos, bicicletas)
-- **Tarifas configuradas** para todos los tipos de vehículos
-- **Horarios de atención** variados por parqueadero
-- **Entradas activas** para simular ocupación
-- **Historial de transacciones** para generar reportes
+### Ramas
+- `main` → Producción automática
+- `develop` → Staging automático
 
-## 🧪 Scripts de Desarrollo
+### Configuración
+Ver documentación completa en:
+- 📄 `docs/deployment/RENDER_SETUP_GRATIS.md` - Setup de Render
+- 📄 `docs/deployment/CI_CD_SETUP.md` - Configuración CI/CD
 
-### Backend
-```bash
-npm start          # Servidor de producción
-npm run dev        # Servidor de desarrollo con nodemon
-npm test           # Ejecutar tests (Jest)
+### URLs de Ejemplo
 ```
+Production:
+- Frontend: https://parknow.vercel.app
+- Backend:  https://parknow-backend.onrender.com
+
+Staging:
+- Frontend: https://parknow-staging.vercel.app
+- Backend:  https://parknow-backend-staging.onrender.com
+```
+
+## 🧪 Testing
+
+```bash
+# Backend
+cd backend
+npm test
+
+# Frontend
+cd frontend
+npm test
+
+# E2E (si está configurado)
+npm run test:e2e
+```
+
+## 📚 Documentación Adicional
+
+### Para Desarrollo
+- 📄 `docs/development/MQTT_NOTIFICACIONES_GLOBALES.md` - Sistema MQTT
+- 📄 `docs/development/FESTIVOS_API.md` - API de festivos
+- 📄 `docs/historias_usuario.md` - Historias de usuario
+
+### Para Despliegue
+- 📄 `docs/deployment/RENDER_SETUP_GRATIS.md` - Render.com (gratis)
+- 📄 `docs/deployment/CI_CD_SETUP.md` - GitHub Actions
 
 ### Frontend
-```bash
-npm run dev        # Servidor de desarrollo
-npm run build      # Build de producción
-npm run preview    # Preview del build
-npm run lint       # Verificar código con ESLint
-```
+- 📄 `frontend/ARCHITECTURE.md` - Arquitectura del frontend
+- 📄 `frontend/QUICK_START.md` - Inicio rápido
 
 ## 🔒 Seguridad
 
-- **Autenticación JWT** con expiración configurada
-- **Hash de contraseñas** con bcrypt y salt rounds
-- **Middleware de autorización** por roles
-- **Validación de entrada** en todos los endpoints
-- **Sanitización de datos** en consultas SQL
-- **CORS configurado** para origen específico
+- ✅ Autenticación JWT con expiración
+- ✅ Hash de contraseñas con bcrypt (10 rounds)
+- ✅ Middleware de autorización por roles
+- ✅ Validación de entrada en todos los endpoints
+- ✅ Sanitización de consultas SQL (Sequelize)
+- ✅ CORS configurado
+- ✅ Variables de entorno para secretos
 
-## 📱 Responsive Design
+## 🐛 Troubleshooting
 
-El frontend está optimizado para:
-- 💻 **Desktop** (1200px+)
-- 📱 **Tablet** (768px - 1199px)
-- 📱 **Mobile** (320px - 767px)
+### Backend no inicia
+```bash
+# Verificar PostgreSQL
+psql -d parknow_db -c "SELECT 1;"
 
-## 🚀 Despliegue
+# Verificar variables de entorno
+cat backend/.env
 
-### Variables de Entorno de Producción
-```env
-NODE_ENV=production
-PORT=3000
-DB_HOST=tu_host_produccion
-DB_NAME=parqueadero_prod
-JWT_SECRET=secreto_muy_seguro_para_produccion
+# Ver logs
+cd backend && npm run dev
 ```
 
-### Build de Producción
+### Frontend no conecta
 ```bash
-# Backend
-npm start
+# Verificar que backend esté corriendo
+curl http://localhost:3000/api/health
 
-# Frontend
-npm run build
-# Servir archivos estáticos desde /dist
+# Verificar CORS
+# Debe permitir http://localhost:3001
+```
+
+### MQTT no funciona
+```bash
+# Verificar puerto 8883
+lsof -i :8883
+
+# Ver logs del broker
+# Buscar: "🔌 Broker MQTT iniciado"
 ```
 
 ## 🤝 Contribución
 
 1. Fork el repositorio
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -am 'Agrega nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
+2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
+3. Commit: `git commit -am 'feat: nueva funcionalidad'`
+4. Push: `git push origin feature/nueva-funcionalidad`
+5. Abre un Pull Request a `develop`
 
+### Convenciones
+- **Commits**: Conventional Commits (`feat:`, `fix:`, `docs:`, etc.)
+- **Ramas**: `feature/`, `bugfix/`, `hotfix/`
+- **PRs**: Siempre a `develop`, nunca directo a `main`
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+MIT License - Ver `LICENSE` para más detalles.
 
 ---
 
 **Desarrollado con ❤️ por el equipo de ParkNow**
+
+**Versión**: 1.0.0  
+**Última actualización**: Octubre 2025

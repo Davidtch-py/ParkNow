@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { sequelize, Usuario, Parqueadero, Vehiculo, Tarifa, Horario, Entrada } from './persistence/models.js';
 import { authMiddleware, adminMiddleware } from './infrastructure/authMiddleware.js';
 import { errorHandler, notFoundHandler } from './infrastructure/errorHandler.js';
+import { mqttService } from './infrastructure/mqttService.js';
 
 // Importar controladores
 import { AuthController } from './presentation/AuthController.js';
@@ -14,6 +15,9 @@ import { ReporteController } from './presentation/ReporteController.js';
 import { TarifaController } from './presentation/TarifaController.js';
 import { UsuarioController } from './presentation/UsuarioController.js';
 import { HorarioController } from './presentation/HorarioController.js';
+import { ParqueaderoUsuarioController } from './presentation/ParqueaderoUsuarioController.js';
+import { FestivoController } from './presentation/FestivoController.js';
+import { NotificacionController } from './presentation/NotificacionController.js';
 
 // Configuración
 dotenv.config();
@@ -60,6 +64,9 @@ const reporteController = new ReporteController();
 const tarifaController = new TarifaController();
 const usuarioController = new UsuarioController();
 const horarioController = new HorarioController();
+const parqueaderoUsuarioController = new ParqueaderoUsuarioController();
+const festivoController = new FestivoController();
+const notificacionController = new NotificacionController();
 
 // Ruta raíz
 app.get('/', (req, res) => {
@@ -75,7 +82,10 @@ app.get('/', (req, res) => {
       reportes: '/api/reportes',
       tarifas: '/api/tarifas',
       usuarios: '/api/usuarios',
-      horarios: '/api/horarios'
+      horarios: '/api/horarios',
+      asignaciones: '/api/parqueaderos-usuarios',
+      festivos: '/api/festivos',
+      notificaciones: '/api/notificaciones'
     }
   });
 });
@@ -133,6 +143,28 @@ app.get('/api/horarios/parqueadero/:parqueaderoId', authMiddleware, horarioContr
 app.post('/api/horarios', authMiddleware, adminMiddleware, horarioController.crear.bind(horarioController));
 app.put('/api/horarios/:id', authMiddleware, adminMiddleware, horarioController.actualizar.bind(horarioController));
 app.delete('/api/horarios/:id', authMiddleware, adminMiddleware, horarioController.eliminar.bind(horarioController));
+
+// Rutas de asignación de parqueaderos a controladores
+app.post('/api/parqueaderos-usuarios/asignar', authMiddleware, adminMiddleware, parqueaderoUsuarioController.asignar.bind(parqueaderoUsuarioController));
+app.post('/api/parqueaderos-usuarios/desasignar', authMiddleware, adminMiddleware, parqueaderoUsuarioController.desasignar.bind(parqueaderoUsuarioController));
+app.get('/api/parqueaderos-usuarios/controlador/:idUsuario?', authMiddleware, parqueaderoUsuarioController.obtenerParqueaderosPorControlador.bind(parqueaderoUsuarioController));
+app.get('/api/parqueaderos-usuarios/parqueadero/:idParqueadero', authMiddleware, parqueaderoUsuarioController.obtenerControladoresPorParqueadero.bind(parqueaderoUsuarioController));
+app.get('/api/parqueaderos-usuarios/controladores', authMiddleware, adminMiddleware, parqueaderoUsuarioController.obtenerTodosLosControladores.bind(parqueaderoUsuarioController));
+
+// Rutas de festivos
+app.get('/api/festivos', authMiddleware, festivoController.obtenerTodos.bind(festivoController));
+app.get('/api/festivos/verificar', authMiddleware, festivoController.verificarFestivo.bind(festivoController));
+app.post('/api/festivos/sincronizar/auto', authMiddleware, adminMiddleware, festivoController.sincronizarActualYSiguiente.bind(festivoController));
+app.post('/api/festivos/sincronizar/:year', authMiddleware, adminMiddleware, festivoController.sincronizar.bind(festivoController));
+app.get('/api/festivos/:id', authMiddleware, festivoController.obtenerPorId.bind(festivoController));
+app.post('/api/festivos', authMiddleware, adminMiddleware, festivoController.crear.bind(festivoController));
+app.put('/api/festivos/:id', authMiddleware, adminMiddleware, festivoController.actualizar.bind(festivoController));
+app.delete('/api/festivos/:id', authMiddleware, adminMiddleware, festivoController.eliminar.bind(festivoController));
+
+// Rutas de notificaciones MQTT
+app.get('/api/notificaciones/config', authMiddleware, notificacionController.obtenerConfiguracion.bind(notificacionController));
+app.get('/api/notificaciones/stats', authMiddleware, adminMiddleware, notificacionController.obtenerEstadisticas.bind(notificacionController));
+app.post('/api/notificaciones/prueba', authMiddleware, adminMiddleware, notificacionController.enviarPrueba.bind(notificacionController));
 
 // Manejo de errores
 app.use(errorHandler);
@@ -290,6 +322,11 @@ async function startServer() {
   try {
     await initializeDatabase();
     
+    // Inicializar broker MQTT
+    const mqttPort = process.env.MQTT_PORT || 1883;
+    const mqttWsPort = process.env.MQTT_WS_PORT || 8883;
+    mqttService.initialize(mqttPort, mqttWsPort);
+    
     app.listen(PORT, () => {
       console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
       console.log(`🌐 API disponible en: http://localhost:${PORT}`);
@@ -305,6 +342,7 @@ async function startServer() {
 process.on('SIGINT', async () => {
   console.log('\n🛑 Cerrando servidor...');
   try {
+    await mqttService.close();
     await sequelize.close();
     console.log('✅ Conexión a la base de datos cerrada.');
     process.exit(0);

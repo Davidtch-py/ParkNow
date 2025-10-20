@@ -1,9 +1,12 @@
 import { ThunkAction } from "redux-thunk";
 import { RootState } from "slices";
 import { Action, Dispatch } from "redux";
-import { postFakeRegister } from "helpers/fakebackend_helper";
 import { registerFailed, registerSuccess, resetRegister } from "./reducer";
-import { getFirebaseBackend } from "helpers/firebase_helper";
+
+// Mock register function - replace with real API call
+const postFakeRegister = async (data: any) => {
+    return Promise.resolve({ user: data, token: 'mock-token' });
+};
 
 interface User {
     email: string;
@@ -17,13 +20,9 @@ export const registerUser = (user: User
         let response: any;
         if (process.env.REACT_APP_DEFAULTAUTH === "fake") {
             response = await postFakeRegister(user);
-        } else if (process.env.REACT_APP_DEFAULTAUTH === "firebase") {
-            
-            // initialize relevant method of both Auth
-            const fireBaseBackend = getFirebaseBackend();
-
-            response = fireBaseBackend.registerUser(user.email, user.password);
         }
+        // Firebase auth removed - implement your own registration here
+        
         if (response) {
             dispatch(registerSuccess(response));
         }

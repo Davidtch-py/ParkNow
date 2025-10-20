@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Search, 
   Plus, 
@@ -6,19 +6,14 @@ import {
   Pencil, 
   Check, 
   DollarSign, 
-  Car, 
-  Clock, 
-  Calendar,
+  Car,
   Save,
   X,
-  AlertCircle,
-  TrendingUp,
-  CheckCircle
+  TrendingUp
 } from 'lucide-react';
 import CountUp from 'react-countup';
 import { tarifaService, parqueaderoService } from '../services/index';
 import { toast } from 'react-toastify';
-import { useAuth } from '../context/AuthContext';
 
 interface Tarifa {
   id: number;
@@ -59,7 +54,7 @@ const GestionTarifas = () => {
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroParqueadero, setFiltroParqueadero] = useState('');
 
-  const { user } = useAuth();
+  // const { user } = useAuth();
 
   const [formTarifa, setFormTarifa] = useState({
     parqueaderoId: '',
@@ -71,13 +66,34 @@ const GestionTarifas = () => {
     activa: true
   });
 
+  const aplicarFiltros = useCallback(() => {
+    let resultado = tarifas;
+
+    if (busqueda) {
+      resultado = resultado.filter(t => 
+        t.parqueaderoNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        t.tipoVehiculo.toLowerCase().includes(busqueda.toLowerCase())
+      );
+    }
+
+    if (filtroTipo !== 'todos') {
+      resultado = resultado.filter(t => t.tipoVehiculo === filtroTipo);
+    }
+
+    if (filtroParqueadero !== 'todos') {
+      resultado = resultado.filter(t => t.parqueaderoId === parseInt(filtroParqueadero));
+    }
+
+    setTarifasFiltradas(resultado);
+  }, [tarifas, busqueda, filtroTipo, filtroParqueadero]);
+
   useEffect(() => {
     cargarDatos();
   }, []);
 
   useEffect(() => {
     aplicarFiltros();
-  }, [tarifas, busqueda, filtroTipo, filtroParqueadero]);
+  }, [aplicarFiltros]);
 
   const cargarDatos = async () => {
     try {
@@ -177,35 +193,6 @@ const GestionTarifas = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const aplicarFiltros = () => {
-    let tarifasFiltradas = [...tarifas];
-
-    // Filtro por búsqueda
-    if (busqueda) {
-      tarifasFiltradas = tarifasFiltradas.filter(tarifa =>
-        tarifa.parqueaderoNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        tarifa.descripcion?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        tarifa.tipoVehiculo.toLowerCase().includes(busqueda.toLowerCase())
-      );
-    }
-
-    // Filtro por tipo de vehículo
-    if (filtroTipo) {
-      tarifasFiltradas = tarifasFiltradas.filter(tarifa =>
-        tarifa.tipoVehiculo === filtroTipo
-      );
-    }
-
-    // Filtro por parqueadero
-    if (filtroParqueadero) {
-      tarifasFiltradas = tarifasFiltradas.filter(tarifa =>
-        tarifa.parqueaderoId?.toString() === filtroParqueadero
-      );
-    }
-
-    setTarifasFiltradas(tarifasFiltradas);
   };
 
   const abrirModalCrear = () => {

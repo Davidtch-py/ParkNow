@@ -1,43 +1,41 @@
 import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft, Check, MapPin, Clock, Users, Car, Building, Calendar, PartyPopper } from 'lucide-react';
+import { MapPin, Building, PartyPopper, Clock } from 'lucide-react';
 import { parqueaderoService } from '../services/index';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 interface ParqueaderoData {
   nombre: string;
   direccion: string;
+  ciudad: string;
   capacidadTotal: number;
   latitud?: number;
   longitud?: number;
-  tipo: 'publico' | 'privado';
-  tamaño: 'pequeño' | 'mediano' | 'grande';
-  servicios: string[];
 }
 
 const ParqueaderoWizard = () => {
+    const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [createdParqueaderoId, setCreatedParqueaderoId] = useState<number | null>(null);
     const [formData, setFormData] = useState<ParqueaderoData>({
         nombre: '',
         direccion: '',
+        ciudad: '',
         capacidadTotal: 0,
         latitud: undefined,
-        longitud: undefined,
-        tipo: 'publico',
-        tamaño: 'mediano',
-        servicios: []
+        longitud: undefined
     });
 
     const steps = [
         { id: 1, title: "Información Básica", icon: Building },
         { id: 2, title: "Ubicación", icon: MapPin },
-        { id: 3, title: "Servicios", icon: Calendar },
-        { id: 4, title: "Completado", icon: PartyPopper }
+        { id: 3, title: "Completado", icon: PartyPopper }
     ];
 
     const handleNextStep = () => {
         if (validateCurrentStep()) {
-            setCurrentStep(prev => Math.min(prev + 1, 4));
+            setCurrentStep(prev => Math.min(prev + 1, 3));
         }
     };
 
@@ -48,7 +46,7 @@ const ParqueaderoWizard = () => {
     const validateCurrentStep = () => {
         switch (currentStep) {
             case 1:
-                if (!formData.nombre || !formData.direccion || !formData.capacidadTotal) {
+                if (!formData.nombre || !formData.direccion || !formData.ciudad || !formData.capacidadTotal) {
                     toast.error('Por favor completa todos los campos obligatorios');
                     return false;
                 }
@@ -58,9 +56,33 @@ const ParqueaderoWizard = () => {
                 }
                 return true;
             case 2:
-                return true; // Ubicación es opcional
-            case 3:
-                return true; // Servicios son opcionales
+                // Validar coordenadas GPS si se proporcionaron
+                if (formData.latitud !== undefined || formData.longitud !== undefined) {
+                    // Si se proporciona una, ambas deben estar presentes
+                    if (formData.latitud === undefined || formData.longitud === undefined) {
+                        toast.error('Debes proporcionar tanto latitud como longitud, o dejar ambas vacías');
+                        return false;
+                    }
+                    
+                    // Validar rango de latitud (-90 a 90)
+                    if (formData.latitud < -90 || formData.latitud > 90) {
+                        toast.error('La latitud debe estar entre -90 y 90 grados');
+                        return false;
+                    }
+                    
+                    // Validar rango de longitud (-180 a 180)
+                    if (formData.longitud < -180 || formData.longitud > 180) {
+                        toast.error('La longitud debe estar entre -180 y 180 grados');
+                        return false;
+                    }
+                    
+                    // Validar que no sean exactamente 0,0 (Null Island - probablemente un error)
+                    if (formData.latitud === 0 && formData.longitud === 0) {
+                        toast.error('Las coordenadas 0,0 no son válidas. Por favor verifica los valores.');
+                        return false;
+                    }
+                }
+                return true;
             default:
                 return true;
         }
@@ -69,14 +91,12 @@ const ParqueaderoWizard = () => {
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            const result = await parqueaderoService.create({
-                ...formData,
-                capacidadDisponible: formData.capacidadTotal
-            });
+            const result = await parqueaderoService.create(formData);
             
             if (result.success) {
                 toast.success('Parqueadero creado exitosamente');
-                setCurrentStep(4);
+                setCreatedParqueaderoId(result.parqueadero?.id || null);
+                setCurrentStep(3);
             } else {
                 toast.error(result.error || 'Error al crear el parqueadero');
             }
@@ -87,27 +107,26 @@ const ParqueaderoWizard = () => {
         }
     };
 
-    const handleServiceToggle = (service: string) => {
-        setFormData(prev => ({
-            ...prev,
-            servicios: prev.servicios.includes(service)
-                ? prev.servicios.filter(s => s !== service)
-                : [...prev.servicios, service]
-        }));
-    };
 
     const resetForm = () => {
         setFormData({
             nombre: '',
             direccion: '',
+            ciudad: '',
             capacidadTotal: 0,
             latitud: undefined,
-            longitud: undefined,
-            tipo: 'publico',
-            tamaño: 'mediano',
-            servicios: []
+            longitud: undefined
         });
+        setCreatedParqueaderoId(null);
         setCurrentStep(1);
+    };
+
+    const handleGestionarHorario = () => {
+        if (createdParqueaderoId) {
+            navigate(`/parknow-horarios?parqueaderoId=${createdParqueaderoId}`);
+        } else {
+            navigate('/parknow-horarios');
+        }
     };
 
     return (
@@ -122,7 +141,7 @@ const ParqueaderoWizard = () => {
                     <div className="card">
                         <div className="card-body">
                             {/* Steps Navigation */}
-                            <div className="grid grid-cols-1 gap-3 lg:grid-cols-4 nav-tabs form-wizard mb-5">
+                            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 nav-tabs form-wizard mb-5">
                                 {steps.map((step) => {
                                     const Icon = step.icon;
                                     const isActive = currentStep === step.id;
@@ -155,49 +174,6 @@ const ParqueaderoWizard = () => {
                                     <div>
                                         <h5 className="mb-3 text-lg font-semibold">Información Básica</h5>
                                         
-                                        {/* Tipo de Parqueadero */}
-                                        <label className="inline-block mb-3 text-base font-medium">
-                                            Tipo de Parqueadero <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="grid grid-cols-1 gap-3 mb-4 md:grid-cols-2">
-                                            <div>
-                                                <input 
-                                                    id="publicoRadio" 
-                                                    name="tipo" 
-                                                    type="radio" 
-                                                    value="publico"
-                                                    checked={formData.tipo === 'publico'}
-                                                    onChange={(e) => setFormData(prev => ({...prev, tipo: e.target.value as 'publico' | 'privado'}))}
-                                                    className="hidden peer"
-                                                />
-                                                <label 
-                                                    htmlFor="publicoRadio" 
-                                                    className="block px-3 text-center border rounded-md cursor-pointer border-slate-200 py-7 text-slate-500 peer-checked:border-blue-500 peer-checked:text-blue-500 hover:border-blue-300"
-                                                >
-                                                    <Building className="block size-8 mx-auto mb-3" />
-                                                    <span className="block font-medium">Público</span>
-                                                </label>
-                                            </div>
-                                            <div>
-                                                <input 
-                                                    id="privadoRadio" 
-                                                    name="tipo" 
-                                                    type="radio" 
-                                                    value="privado"
-                                                    checked={formData.tipo === 'privado'}
-                                                    onChange={(e) => setFormData(prev => ({...prev, tipo: e.target.value as 'publico' | 'privado'}))}
-                                                    className="hidden peer"
-                                                />
-                                                <label 
-                                                    htmlFor="privadoRadio" 
-                                                    className="block px-3 text-center border rounded-md cursor-pointer border-slate-200 py-7 text-slate-500 peer-checked:border-blue-500 peer-checked:text-blue-500 hover:border-blue-300"
-                                                >
-                                                    <Building className="block size-8 mx-auto mb-3" />
-                                                    <span className="block font-medium">Privado</span>
-                                                </label>
-                                            </div>
-                                        </div>
-
                                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             <div>
                                                 <label className="inline-block mb-2 text-base font-medium">
@@ -209,6 +185,18 @@ const ParqueaderoWizard = () => {
                                                     placeholder="Ej: Parqueadero Central"
                                                     value={formData.nombre}
                                                     onChange={(e) => setFormData(prev => ({...prev, nombre: e.target.value}))}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="inline-block mb-2 text-base font-medium">
+                                                    Ciudad <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    className="form-input w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:border-blue-500"
+                                                    placeholder="Ej: Bogotá"
+                                                    value={formData.ciudad}
+                                                    onChange={(e) => setFormData(prev => ({...prev, ciudad: e.target.value}))}
                                                 />
                                             </div>
                                             <div>
@@ -236,18 +224,6 @@ const ParqueaderoWizard = () => {
                                                     onChange={(e) => setFormData(prev => ({...prev, direccion: e.target.value}))}
                                                 />
                                             </div>
-                                            <div>
-                                                <label className="inline-block mb-2 text-base font-medium">Tamaño</label>
-                                                <select
-                                                    className="form-input w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:border-blue-500"
-                                                    value={formData.tamaño}
-                                                    onChange={(e) => setFormData(prev => ({...prev, tamaño: e.target.value as 'pequeño' | 'mediano' | 'grande'}))}
-                                                >
-                                                    <option value="pequeño">Pequeño (1-50 espacios)</option>
-                                                    <option value="mediano">Mediano (51-200 espacios)</option>
-                                                    <option value="grande">Grande (200+ espacios)</option>
-                                                </select>
-                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -262,108 +238,145 @@ const ParqueaderoWizard = () => {
                                         
                                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             <div>
-                                                <label className="inline-block mb-2 text-base font-medium">Latitud</label>
+                                                <label className="inline-block mb-2 text-base font-medium">
+                                                    Latitud
+                                                    <span className="ml-1 text-xs text-slate-500">(-90 a 90)</span>
+                                                </label>
                                                 <input
                                                     type="number"
                                                     step="any"
+                                                    min="-90"
+                                                    max="90"
                                                     className="form-input w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:border-blue-500"
                                                     placeholder="4.6097100"
                                                     value={formData.latitud || ''}
                                                     onChange={(e) => setFormData(prev => ({...prev, latitud: parseFloat(e.target.value) || undefined}))}
                                                 />
+                                                <p className="mt-1 text-xs text-slate-500">Ejemplo: 4.6097 (Bogotá)</p>
                                             </div>
                                             <div>
-                                                <label className="inline-block mb-2 text-base font-medium">Longitud</label>
+                                                <label className="inline-block mb-2 text-base font-medium">
+                                                    Longitud
+                                                    <span className="ml-1 text-xs text-slate-500">(-180 a 180)</span>
+                                                </label>
                                                 <input
                                                     type="number"
                                                     step="any"
+                                                    min="-180"
+                                                    max="180"
                                                     className="form-input w-full px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:border-blue-500"
                                                     placeholder="-74.0817500"
                                                     value={formData.longitud || ''}
                                                     onChange={(e) => setFormData(prev => ({...prev, longitud: parseFloat(e.target.value) || undefined}))}
                                                 />
+                                                <p className="mt-1 text-xs text-slate-500">Ejemplo: -74.0817 (Bogotá)</p>
                                             </div>
                                         </div>
                                         
                                         <div className="mt-4 p-4 bg-blue-50 rounded-md">
-                                            <p className="text-sm text-blue-700">
-                                                <strong>Consejo:</strong> Puedes obtener las coordenadas desde Google Maps haciendo clic derecho en la ubicación.
+                                            <p className="text-sm text-blue-700 mb-2">
+                                                <strong>💡 Cómo obtener coordenadas:</strong>
+                                            </p>
+                                            <ol className="text-sm text-blue-700 list-decimal list-inside space-y-1">
+                                                <li>Abre Google Maps en tu navegador</li>
+                                                <li>Haz clic derecho en la ubicación del parqueadero</li>
+                                                <li>Selecciona las coordenadas que aparecen en la parte superior</li>
+                                                <li>Copia y pega aquí (primer número = latitud, segundo = longitud)</li>
+                                            </ol>
+                                        </div>
+
+                                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                                            <p className="text-xs text-amber-800">
+                                                <strong>⚠️ Importante:</strong> Las coordenadas deben ser válidas y estar dentro de los rangos permitidos del planeta Tierra.
                                             </p>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Step 3: Servicios */}
+                                {/* Step 3: Completado */}
                                 {currentStep === 3 && (
                                     <div>
-                                        <h5 className="mb-3 text-lg font-semibold">Servicios Disponibles</h5>
-                                        <p className="mb-4 text-slate-600">
-                                            Selecciona los servicios que ofrece este parqueadero.
-                                        </p>
+                                        <div className="text-center py-4">
+                                            <PartyPopper className="h-16 w-16 mx-auto mb-4 text-green-500" />
+                                            <h5 className="mb-3 text-lg font-semibold text-green-700">¡Parqueadero Registrado!</h5>
+                                            <p className="text-slate-600 mb-6">
+                                                El parqueadero <strong>{formData.nombre}</strong> ha sido registrado exitosamente en el sistema.
+                                            </p>
+                                        </div>
                                         
-                                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                                            {[
-                                                'Seguridad 24/7',
-                                                'Cámaras de vigilancia',
-                                                'Techo cubierto',
-                                                'Lavado de vehículos',
-                                                'Carga eléctrica',
-                                                'Acceso discapacitados',
-                                                'Espacios grandes',
-                                                'Ventilación',
-                                                'Iluminación LED'
-                                            ].map((service) => (
-                                                <div key={service} className="flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        id={service}
-                                                        checked={formData.servicios.includes(service)}
-                                                        onChange={() => handleServiceToggle(service)}
-                                                        className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                    />
-                                                    <label htmlFor={service} className="text-sm font-medium text-gray-700">
-                                                        {service}
-                                                    </label>
+                                        <div className="bg-gray-50 p-4 rounded-md mb-4">
+                                            <h6 className="font-semibold mb-3">Resumen:</h6>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                                <div>
+                                                    <span className="font-medium text-slate-600">Nombre:</span>
+                                                    <p className="text-slate-900">{formData.nombre}</p>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Step 4: Completado */}
-                                {currentStep === 4 && (
-                                    <div className="text-center py-8">
-                                        <PartyPopper className="h-16 w-16 mx-auto mb-4 text-green-500" />
-                                        <h5 className="mb-3 text-lg font-semibold text-green-700">¡Parqueadero Registrado!</h5>
-                                        <p className="text-slate-600 mb-6">
-                                            El parqueadero <strong>{formData.nombre}</strong> ha sido registrado exitosamente en el sistema.
-                                        </p>
-                                        
-                                        <div className="bg-gray-50 p-4 rounded-md mb-4 text-left">
-                                            <h6 className="font-semibold mb-2">Resumen:</h6>
-                                            <ul className="text-sm space-y-1">
-                                                <li><strong>Nombre:</strong> {formData.nombre}</li>
-                                                <li><strong>Tipo:</strong> {formData.tipo}</li>
-                                                <li><strong>Capacidad:</strong> {formData.capacidadTotal} espacios</li>
-                                                <li><strong>Dirección:</strong> {formData.direccion}</li>
-                                                {formData.servicios.length > 0 && (
-                                                    <li><strong>Servicios:</strong> {formData.servicios.join(', ')}</li>
+                                                <div>
+                                                    <span className="font-medium text-slate-600">Ciudad:</span>
+                                                    <p className="text-slate-900">{formData.ciudad}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-slate-600">Capacidad:</span>
+                                                    <p className="text-slate-900">{formData.capacidadTotal} espacios</p>
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <span className="font-medium text-slate-600">Dirección:</span>
+                                                    <p className="text-slate-900">{formData.direccion}</p>
+                                                </div>
+                                                {formData.latitud && formData.longitud && (
+                                                    <div className="md:col-span-2">
+                                                        <span className="font-medium text-slate-600">Coordenadas:</span>
+                                                        <p className="text-slate-900">{formData.latitud}, {formData.longitud}</p>
+                                                    </div>
                                                 )}
-                                            </ul>
+                                            </div>
                                         </div>
+
+                                        {/* Mapa */}
+                                        {formData.latitud && formData.longitud ? (
+                                            <div className="mb-4">
+                                                <h6 className="font-semibold mb-3">Ubicación en el Mapa:</h6>
+                                                <div className="border border-slate-200 rounded-md overflow-hidden" style={{ height: '400px' }}>
+                                                    <iframe
+                                                        width="100%"
+                                                        height="100%"
+                                                        frameBorder="0"
+                                                        style={{ border: 0 }}
+                                                        src={`https://www.google.com/maps?q=${formData.latitud},${formData.longitud}&hl=es&z=16&output=embed`}
+                                                        allowFullScreen
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="mb-4 p-4 bg-blue-50 rounded-md text-center">
+                                                <MapPin className="h-12 w-12 mx-auto mb-2 text-blue-400" />
+                                                <p className="text-sm text-blue-700">
+                                                    No se proporcionaron coordenadas GPS para este parqueadero.
+                                                </p>
+                                            </div>
+                                        )}
                                         
-                                        <button
-                                            onClick={resetForm}
-                                            className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                                        >
-                                            Registrar Otro Parqueadero
-                                        </button>
+                                        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                                            <button
+                                                onClick={handleGestionarHorario}
+                                                className="px-6 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center gap-2 font-medium"
+                                            >
+                                                <Clock className="h-5 w-5" />
+                                                Gestionar Horario
+                                            </button>
+                                            <button
+                                                onClick={resetForm}
+                                                className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors font-medium"
+                                            >
+                                                Registrar Otro Parqueadero
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
 
                             {/* Navigation Buttons */}
-                            {currentStep < 4 && (
+                            {currentStep < 3 && (
                                 <div className="flex justify-between gap-2 mt-6">
                                     <button 
                                         type="button" 
@@ -374,7 +387,7 @@ const ParqueaderoWizard = () => {
                                         ← Anterior
                                     </button>
                                     
-                                    {currentStep === 3 ? (
+                                    {currentStep === 2 ? (
                                         <button 
                                             type="button" 
                                             onClick={handleSubmit}
