@@ -35,9 +35,14 @@ En la página del cluster verás:
 Ve a Vercel → Settings → Environment Variables y agrega:
 
 ```
-REACT_APP_MQTT_URL=wss://tu-cluster.s2.eu.hivemq.cloud:8884/mqtt
+REACT_APP_MQTT_URL=tu-cluster.s2.eu.hivemq.cloud:8884/mqtt
 REACT_APP_MQTT_USERNAME=parknow_user
 REACT_APP_MQTT_PASSWORD=tu_password_segura
+```
+
+**Nota:** No es necesario incluir `wss://` en la URL, el código lo agregará automáticamente cuando la página se cargue por HTTPS. Si prefieres incluirlo, usa:
+```
+REACT_APP_MQTT_URL=wss://tu-cluster.s2.eu.hivemq.cloud:8884/mqtt
 ```
 
 #### Backend (Render):

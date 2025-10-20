@@ -90,9 +90,26 @@ export const MQTTProvider: React.FC<MQTTProviderProps> = ({ children }) => {
   useEffect(() => {
     try {
       // Obtener configuración MQTT desde variables de entorno o API
-      const mqttUrl = process.env.REACT_APP_MQTT_URL || 'ws://localhost:8883';
+      let mqttUrl = process.env.REACT_APP_MQTT_URL || 'ws://localhost:8883';
       const mqttUsername = process.env.REACT_APP_MQTT_USERNAME;
       const mqttPassword = process.env.REACT_APP_MQTT_PASSWORD;
+      
+      // Asegurar que la URL tenga el protocolo correcto
+      // Si la página es HTTPS, usar WSS (WebSocket Secure)
+      if (window.location.protocol === 'https:' && !mqttUrl.startsWith('wss://')) {
+        // Si la URL no tiene protocolo, agregar wss://
+        if (!mqttUrl.startsWith('ws://') && !mqttUrl.startsWith('wss://')) {
+          mqttUrl = `wss://${mqttUrl}`;
+        }
+        // Si tiene ws://, cambiarlo a wss://
+        else if (mqttUrl.startsWith('ws://')) {
+          mqttUrl = mqttUrl.replace('ws://', 'wss://');
+        }
+      }
+      // Si la página es HTTP y la URL no tiene protocolo, agregar ws://
+      else if (!mqttUrl.startsWith('ws://') && !mqttUrl.startsWith('wss://')) {
+        mqttUrl = `ws://${mqttUrl}`;
+      }
       
       console.log('🔌 Conectando a MQTT:', mqttUrl);
       
