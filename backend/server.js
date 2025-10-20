@@ -25,10 +25,39 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares globales
+// Configuración de CORS para permitir frontend en Vercel y desarrollo local
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'https://parknow.vercel.app',
+  'https://parknow-git-develop.vercel.app',
+  process.env.FRONTEND_URL
+].filter(Boolean); // Filtrar valores undefined
+
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3002'],
-  credentials: true
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como Postman, Thunder Client, etc.)
+    if (!origin) return callback(null, true);
+    
+    // En desarrollo, permitir cualquier origen
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // En producción, verificar lista de orígenes permitidos
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS bloqueado para origen:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -28,7 +28,10 @@ DATABASE_URL=postgresql://parknow:PASSWORD@dpg-XXXXX.ohio-postgres.render.com:54
 JWT_SECRET=tu_jwt_secret_seguro
 MQTT_PORT=1883
 MQTT_WS_PORT=8883
+FRONTEND_URL=https://parknow.vercel.app
 ```
+
+**Nota:** El backend permite automáticamente todos los dominios `*.vercel.app`, pero puedes especificar `FRONTEND_URL` para mayor control.
 
 ## GitHub Actions Secrets
 
