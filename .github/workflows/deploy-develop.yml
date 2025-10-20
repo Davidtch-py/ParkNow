@@ -113,8 +113,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment:
-      name: staging
     
     steps:
       - name: Checkout code
