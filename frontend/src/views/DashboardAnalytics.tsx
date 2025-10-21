@@ -494,7 +494,7 @@ const DashboardAnalytics = () => {
                     <div className="w-16 text-xs text-gray-600">{vehiculo.tipo}</div>
                     <div className="flex-1 bg-gray-200 rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full ${vehiculo.color} transition-all duration-500`}
+                        className={`h-2 rounded-full var(--park-blue) transition-all duration-500`}
                         style={{ width: `${vehiculo.porcentaje}%`, accentColor: 'var(--park-blue)',
                         borderColor: 'var(--park-blue)' }}
                       ></div>
