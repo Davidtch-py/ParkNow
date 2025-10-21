@@ -12,6 +12,8 @@
   --park-cream-light: rgba(233, 229, 217, 0.3);
   --park-cream-medium: rgba(233, 229, 217, 0.8);
   --park-cream-dark: rgb(210, 205, 190);
+
+  --park-white: rgba(255,255,255)
 }
 
 /* Clases utilitarias para los colores empresariales */

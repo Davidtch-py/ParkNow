@@ -14,7 +14,7 @@ const AgregarParqueadero = () => {
 
   const [mensaje, setMensaje] = useState(null);
   //const { token } = useAuth(); // Asegúrate que useAuth devuelve el token
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token');  
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

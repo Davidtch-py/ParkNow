@@ -18,6 +18,7 @@ import {
 import CountUp from 'react-countup';
 import { parqueaderoService, reporteService, entradaService } from '../services/index';
 import { useAuth } from '../context/AuthContext';
+import '../assets/scss/parknow-colors.css';
 
 interface DashboardStats {
   espaciosTotales: number;
@@ -497,7 +498,8 @@ const DashboardAnalytics = () => {
                     <div className="flex-1 bg-gray-200 rounded-full h-2">
                       <div
                         className={`h-2 rounded-full ${vehiculo.color} transition-all duration-500`}
-                        style={{ width: `${vehiculo.porcentaje}%` }}
+                        style={{ width: `${vehiculo.porcentaje}%`, accentColor: 'var(--park-blue)',
+                        borderColor: 'var(--park-blue)' }}
                       ></div>
                     </div>
                     <div className="w-8 text-xs text-gray-600 text-right">{vehiculo.porcentaje}%</div>
