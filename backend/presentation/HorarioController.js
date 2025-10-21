@@ -52,7 +52,9 @@ export class HorarioController {
 
   async crear(req, res) {
     try {
-      const { parqueaderoId, diaSemana, horaApertura, horaCierre, activo } = req.body;
+      const { parqueaderoId, diaSemana, horaApertura, horaCierre, activo, esFestivo } = req.body;
+
+      console.log('[HorarioController] Datos recibidos:', req.body);
 
       if (!parqueaderoId || !diaSemana || !horaApertura || !horaCierre) {
         return res.status(400).json({
@@ -66,7 +68,8 @@ export class HorarioController {
         diaSemana,
         horaApertura,
         horaCierre,
-        activo: activo !== undefined ? activo : true
+        activo: activo !== undefined ? activo : true,
+        esFestivo: esFestivo || false
       });
 
       res.status(201).json({
@@ -74,9 +77,12 @@ export class HorarioController {
         horario: nuevoHorario
       });
     } catch (error) {
+      console.error('[HorarioController] Error al crear horario:', error);
+      console.error('[HorarioController] Stack:', error.stack);
       res.status(500).json({
         success: false,
-        error: 'Error interno del servidor'
+        error: 'Error interno del servidor',
+        details: error.message
       });
     }
   }

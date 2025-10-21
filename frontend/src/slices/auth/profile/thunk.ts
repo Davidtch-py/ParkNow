@@ -1,9 +1,12 @@
-import { postFakeProfile } from "helpers/fakebackend_helper";
 import { profileFailed, profileSuccess } from "./reducer"
-import { getFirebaseBackend } from "helpers/firebase_helper";
 import { RootState } from "slices";
 import { ThunkAction } from "redux-thunk";
 import { Action, Dispatch } from "redux";
+
+// Mock profile function - replace with real API call
+const postFakeProfile = async (data: any) => {
+    return Promise.resolve(data);
+};
 
 interface User {
     username: string;
@@ -16,15 +19,8 @@ export const editProfile = (user: User
         let response: any;
         if (process.env.REACT_APP_DEFAULTAUTH === "fake") {
             response = await postFakeProfile(user)
-
-        } else if (process.env.REACT_APP_DEFAULTAUTH === "firebase") {
-
-            const fireBaseBackend = getFirebaseBackend();
-            response = await fireBaseBackend.editProfileAPI(
-                user.username,
-                user.idx
-            );
         }
+        // Firebase auth removed - implement your own profile update here
 
         if (response) {
             dispatch(profileSuccess(response))

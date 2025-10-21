@@ -300,9 +300,9 @@ const LoginBoxed = () => {
                     />
                     <span className="ml-2 text-sm text-gray-600">Recordarme</span>
                   </label>
-                  <a href="#" className="text-sm transition-colors" style={{ color: 'var(--park-blue-dark)' } as React.CSSProperties}>
+                  <button type="button" onClick={() => toast.info('Funcionalidad en desarrollo')} className="text-sm transition-colors bg-transparent border-0 cursor-pointer p-0" style={{ color: 'var(--park-blue-dark)' } as React.CSSProperties}>
                     ¿Olvidaste tu contraseña?
-                  </a>
+                  </button>
                 </div>
 
                 <button

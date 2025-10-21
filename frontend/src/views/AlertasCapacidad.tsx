@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, Bell, BellRing, CheckCircle, X, Settings, RefreshCw } from 'lucide-react';
-import { parqueaderoService } from '../services/index';
 import { toast } from 'react-toastify';
+import { parqueaderoService } from '../services/index';
+import { useMQTT } from '../contexts/MQTTContext';
 
 interface AlertaCapacidad {
   id: number;
@@ -22,17 +23,18 @@ interface ConfiguracionAlertas {
   umbralMedio: number;
   notificacionesActivas: boolean;
   sonidoActivo: boolean;
-  intervaloActualizacion: number; // en minutos
+  intervaloActualizacion: number;
 }
 
 const AlertasCapacidad = () => {
+  const { subscribe, unsubscribe, isConnected, publish } = useMQTT();
   const [alertas, setAlertas] = useState<AlertaCapacidad[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [configuracion, setConfiguracion] = useState<ConfiguracionAlertas>({
-    umbralCritico: 95, // 95% ocupado
-    umbralAlto: 85,    // 85% ocupado
-    umbralMedio: 75,   // 75% ocupado
+    umbralCritico: 95,
+    umbralAlto: 85,
+    umbralMedio: 75,
     notificacionesActivas: true,
     sonidoActivo: true,
     intervaloActualizacion: 5
@@ -40,90 +42,97 @@ const AlertasCapacidad = () => {
   const [filtroNivel, setFiltroNivel] = useState<'todos' | 'critico' | 'alto' | 'medio'>('todos');
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'leidas' | 'no-leidas'>('no-leidas');
 
-  useEffect(() => {
-    cargarAlertas();
-    const interval = setInterval(cargarAlertas, configuracion.intervaloActualizacion * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [configuracion.intervaloActualizacion]);
-
-  const cargarAlertas = async () => {
+  const cargarAlertas = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // Simular carga de alertas desde el backend
-      // En producción, esto vendría de parqueaderoService.getAlertsCapacidad()
-      const alertasMock: AlertaCapacidad[] = [
-        {
-          id: 1,
-          parqueaderoId: 1,
-          nombreParqueadero: 'Parqueadero Central',
-          direccion: 'Calle 100 #15-30',
-          capacidadTotal: 200,
-          capacidadDisponible: 8,
-          porcentajeOcupado: 96,
-          nivel: 'critico',
-          fechaAlerta: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // hace 10 minutos
-          leida: false
-        },
-        {
-          id: 2,
-          parqueaderoId: 2,
-          nombreParqueadero: 'Plaza Norte',
-          direccion: 'Carrera 45 #80-20',
-          capacidadTotal: 150,
-          capacidadDisponible: 22,
-          porcentajeOcupado: 85,
-          nivel: 'alto',
-          fechaAlerta: new Date(Date.now() - 25 * 60 * 1000).toISOString(), // hace 25 minutos
-          leida: true
-        },
-        {
-          id: 3,
-          parqueaderoId: 3,
-          nombreParqueadero: 'Centro Comercial',
-          direccion: 'Avenida 68 #32-15',
-          capacidadTotal: 300,
-          capacidadDisponible: 75,
-          porcentajeOcupado: 75,
-          nivel: 'medio',
-          fechaAlerta: new Date(Date.now() - 45 * 60 * 1000).toISOString(), // hace 45 minutos
-          leida: false
-        }
-      ];
 
-      setAlertas(alertasMock);
+      // Obtener parqueaderos con capacidad baja desde el backend
+      const response = await parqueaderoService.getCapacidadBaja(configuracion.umbralMedio);
       
-      // Mostrar notificación para alertas nuevas críticas
-      const alertasCriticasNuevas = alertasMock.filter(alerta => 
-        alerta.nivel === 'critico' && !alerta.leida
-      );
-      
-      if (alertasCriticasNuevas.length > 0 && configuracion.notificacionesActivas) {
-        toast.error(`¡${alertasCriticasNuevas.length} parqueadero(s) con capacidad crítica!`, {
-          position: 'top-right',
-          autoClose: 10000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
+      if (response.success && response.parqueaderos) {
+        setAlertas(prevAlertas => {
+          const alertasNuevas: AlertaCapacidad[] = response.parqueaderos.map((p: any) => {
+            const porcentajeOcupado = Math.round(((p.capacidad_total - p.capacidad_disponible) / p.capacidad_total) * 100);
+            
+            let nivel: 'critico' | 'alto' | 'medio' = 'medio';
+            if (porcentajeOcupado >= configuracion.umbralCritico) {
+              nivel = 'critico';
+            } else if (porcentajeOcupado >= configuracion.umbralAlto) {
+              nivel = 'alto';
+            }
+
+            // Buscar si ya existe esta alerta en el estado anterior
+            const alertaExistente = prevAlertas.find(a => a.parqueaderoId === p.id);
+
+            return {
+              id: p.id,
+              parqueaderoId: p.id,
+              nombreParqueadero: p.nombre,
+              direccion: p.direccion,
+              capacidadTotal: p.capacidad_total,
+              capacidadDisponible: p.capacidad_disponible,
+              porcentajeOcupado,
+              nivel,
+              fechaAlerta: alertaExistente?.fechaAlerta || new Date().toISOString(),
+              leida: alertaExistente?.leida || false
+            };
+          });
+
+          // Notificaciones para alertas críticas nuevas
+          const alertasCriticasNuevas = alertasNuevas.filter(alerta =>
+            alerta.nivel === 'critico' && !alerta.leida
+          );
+
+          if (alertasCriticasNuevas.length > 0 && configuracion.notificacionesActivas) {
+            toast.error(`¡${alertasCriticasNuevas.length} parqueadero(s) con capacidad crítica!`, {
+              autoClose: false
+            });
+            
+            if (configuracion.sonidoActivo) {
+              // Reproducir sonido de alerta
+              const audio = new Audio('/notification.mp3');
+              audio.play().catch(() => {});
+            }
+          }
+
+          return alertasNuevas;
         });
-        
-        // Reproducir sonido si está activado
-        if (configuracion.sonidoActivo) {
-          // En un entorno real, aquí reproduciríamos un sonido
-          console.log('🔔 Sonido de alerta reproducido');
-        }
       }
 
     } catch (error) {
+      console.error('Error cargando alertas:', error);
       toast.error('Error cargando alertas de capacidad');
     } finally {
       setLoading(false);
     }
-  };
+  }, [configuracion]);
+
+  // Suscribirse a notificaciones MQTT de capacidad
+  useEffect(() => {
+    if (isConnected) {
+      subscribe('parknow/notificaciones/capacidad', (notification) => {
+        if (notification.type === 'CAPACIDAD_BAJA') {
+          console.log('📨 Alerta de capacidad recibida:', notification);
+          // Recargar alertas cuando llega una notificación
+          cargarAlertas();
+        }
+      });
+
+      return () => {
+        unsubscribe('parknow/notificaciones/capacidad');
+      };
+    }
+  }, [isConnected, subscribe, unsubscribe, cargarAlertas]);
+
+  // Cargar alertas periódicamente
+  useEffect(() => {
+    cargarAlertas();
+    const interval = setInterval(cargarAlertas, configuracion.intervaloActualizacion * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [cargarAlertas, configuracion.intervaloActualizacion]);
 
   const marcarComoLeida = (alertaId: number) => {
-    setAlertas(alertas.map(alerta => 
+    setAlertas(alertas.map(alerta =>
       alerta.id === alertaId ? { ...alerta, leida: true } : alerta
     ));
   };
@@ -138,38 +147,87 @@ const AlertasCapacidad = () => {
     toast.success('Alerta eliminada');
   };
 
+  // 🧪 FUNCIÓN DE PRUEBA: Simular alerta de capacidad baja
+  const simularAlertaCapacidad = async () => {
+    try {
+      // Obtener todos los parqueaderos
+      const response = await parqueaderoService.getAll();
+      if (response.success && response.parqueaderos && response.parqueaderos.length > 0) {
+        // Seleccionar un parqueadero al azar
+        const parqueaderoAleatorio = response.parqueaderos[Math.floor(Math.random() * response.parqueaderos.length)];
+        
+        // Simular capacidad baja (5% disponible)
+        const capacidadSimulada = Math.floor(parqueaderoAleatorio.capacidad_total * 0.05);
+        const porcentajeDisponible = 5;
+        
+        // Crear notificación simulada
+        const notificacionSimulada = {
+          type: 'CAPACIDAD_BAJA',
+          timestamp: new Date().toISOString(),
+          parqueadero: {
+            id: parqueaderoAleatorio.id,
+            nombre: parqueaderoAleatorio.nombre,
+            capacidadDisponible: capacidadSimulada,
+            capacidadTotal: parqueaderoAleatorio.capacidad_total,
+            porcentaje: porcentajeDisponible
+          },
+          message: `[SIMULACIÓN] El parqueadero ${parqueaderoAleatorio.nombre} tiene baja capacidad disponible`
+        };
+
+        // Publicar en MQTT para que todos los clientes conectados la reciban
+        if (isConnected) {
+          publish('parknow/notificaciones/capacidad', notificacionSimulada);
+          
+          toast.success(`🧪 Alerta simulada enviada: ${parqueaderoAleatorio.nombre} (${porcentajeDisponible}% disponible)`, {
+            autoClose: 3000
+          });
+        } else {
+          toast.warning('MQTT no está conectado. Solo se mostrará localmente.');
+          
+          // Mostrar notificación local
+          toast.error(
+            `🚨 [SIMULACIÓN] Capacidad Crítica: ${parqueaderoAleatorio.nombre} - ${porcentajeDisponible}% disponible`,
+            {
+              autoClose: false,
+              position: 'top-right'
+            }
+          );
+        }
+        
+        // Recargar alertas
+        await cargarAlertas();
+      } else {
+        toast.error('No hay parqueaderos disponibles para simular');
+      }
+    } catch (error) {
+      console.error('Error simulando alerta:', error);
+      toast.error('Error al simular alerta');
+    }
+  };
+
   const obtenerColorNivel = (nivel: string) => {
     switch (nivel) {
-      case 'critico':
-        return 'bg-red-100 border-red-300 text-red-800';
-      case 'alto':
-        return 'bg-orange-100 border-orange-300 text-orange-800';
-      case 'medio':
-        return 'bg-yellow-100 border-yellow-300 text-yellow-800';
-      default:
-        return 'bg-gray-100 border-gray-300 text-gray-800';
+      case 'critico': return 'bg-red-100 border-red-300 text-red-800';
+      case 'alto': return 'bg-orange-100 border-orange-300 text-orange-800';
+      case 'medio': return 'bg-yellow-100 border-yellow-300 text-yellow-800';
+      default: return 'bg-gray-100 border-gray-300 text-gray-800';
     }
   };
 
   const obtenerIconoNivel = (nivel: string) => {
     switch (nivel) {
-      case 'critico':
-        return <AlertTriangle className="h-5 w-5 text-red-600" />;
-      case 'alto':
-        return <AlertTriangle className="h-5 w-5 text-orange-600" />;
-      case 'medio':
-        return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
-      default:
-        return <Bell className="h-5 w-5 text-gray-600" />;
+      case 'critico': return <AlertTriangle className="h-5 w-5 text-red-600" />;
+      case 'alto': return <AlertTriangle className="h-5 w-5 text-orange-600" />;
+      case 'medio': return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
+      default: return <Bell className="h-5 w-5 text-gray-600" />;
     }
   };
 
   const alertasFiltradas = alertas.filter(alerta => {
     const cumpleFiltroNivel = filtroNivel === 'todos' || alerta.nivel === filtroNivel;
-    const cumpleFiltroEstado = filtroEstado === 'todos' || 
-      (filtroEstado === 'leidas' && alerta.leida) || 
+    const cumpleFiltroEstado = filtroEstado === 'todos' ||
+      (filtroEstado === 'leidas' && alerta.leida) ||
       (filtroEstado === 'no-leidas' && !alerta.leida);
-    
     return cumpleFiltroNivel && cumpleFiltroEstado;
   });
 
@@ -183,7 +241,6 @@ const AlertasCapacidad = () => {
 
   return (
     <div className="container-fluid">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Alertas de Capacidad</h1>
@@ -193,14 +250,25 @@ const AlertasCapacidad = () => {
           <button
             onClick={cargarAlertas}
             disabled={loading}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
             <RefreshCw className={`size-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </button>
+          
+          {/* 🧪 BOTÓN DE PRUEBA TEMPORAL */}
+          <button
+            onClick={simularAlertaCapacidad}
+            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 border-2 border-purple-400"
+            title="Simular alerta de capacidad baja para pruebas MQTT"
+          >
+            <Bell className="size-4 mr-2" />
+            🧪 Simular Alerta
+          </button>
+          
           <button
             onClick={() => setShowSettings(true)}
-            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
           >
             <Settings className="size-4 mr-2" />
             Configuración
@@ -208,18 +276,17 @@ const AlertasCapacidad = () => {
         </div>
       </div>
 
-      {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center">
             <Bell className="h-8 w-8 text-blue-600" />
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Total Alertas</p>
-              <p className="text-2xl font-bold text-gray-900">{contadorAlertas.total}</p>
+              <p className="text-sm font-medium text-gray-500">Total</p>
+              <p className="text-2xl font-bold">{contadorAlertas.total}</p>
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center">
             <BellRing className="h-8 w-8 text-blue-600" />
@@ -261,15 +328,14 @@ const AlertasCapacidad = () => {
         </div>
       </div>
 
-      {/* Filtros y Acciones */}
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="p-4 border-b border-gray-200">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-4">
               <select
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={filtroNivel}
                 onChange={(e) => setFiltroNivel(e.target.value as any)}
+                className="px-3 py-2 border border-gray-300 rounded-md"
               >
                 <option value="todos">Todos los niveles</option>
                 <option value="critico">Crítico</option>
@@ -278,9 +344,9 @@ const AlertasCapacidad = () => {
               </select>
 
               <select
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={filtroEstado}
                 onChange={(e) => setFiltroEstado(e.target.value as any)}
+                className="px-3 py-2 border border-gray-300 rounded-md"
               >
                 <option value="todos">Todos los estados</option>
                 <option value="no-leidas">No leídas</option>
@@ -291,7 +357,7 @@ const AlertasCapacidad = () => {
             {contadorAlertas.noLeidas > 0 && (
               <button
                 onClick={marcarTodasComoLeidas}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
                 Marcar todas como leídas
               </button>
@@ -299,7 +365,6 @@ const AlertasCapacidad = () => {
           </div>
         </div>
 
-        {/* Lista de Alertas */}
         <div className="divide-y divide-gray-200">
           {loading ? (
             <div className="flex justify-center items-center py-8">
@@ -307,78 +372,42 @@ const AlertasCapacidad = () => {
             </div>
           ) : alertasFiltradas.length > 0 ? (
             alertasFiltradas.map((alerta) => (
-              <div
-                key={alerta.id}
-                className={`p-4 ${!alerta.leida ? 'bg-blue-50' : 'bg-white'} hover:bg-gray-50 transition-colors`}
-              >
+              <div key={alerta.id} className={`p-4 ${!alerta.leida ? 'bg-blue-50' : ''}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
                     {obtenerIconoNivel(alerta.nivel)}
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {alerta.nombreParqueadero}
-                        </h3>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full border ${obtenerColorNivel(alerta.nivel)}`}>
+                        <h3 className="font-semibold">{alerta.nombreParqueadero}</h3>
+                        <span className={`px-2 py-1 text-xs rounded-full border ${obtenerColorNivel(alerta.nivel)}`}>
                           {alerta.nivel.toUpperCase()}
                         </span>
-                        {!alerta.leida && (
-                          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                            NUEVA
-                          </span>
-                        )}
+                        {!alerta.leida && <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">NUEVA</span>}
                       </div>
-                      
-                      <p className="text-gray-600 mb-2">{alerta.direccion}</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                        <div>
-                          <span className="text-sm text-gray-500">Ocupación:</span>
-                          <p className="font-semibold text-lg">{alerta.porcentajeOcupado}%</p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-500">Disponibles:</span>
-                          <p className="font-semibold text-lg text-green-600">{alerta.capacidadDisponible}</p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-gray-500">Total:</span>
-                          <p className="font-semibold text-lg">{alerta.capacidadTotal}</p>
-                        </div>
+                      <p className="text-gray-600 text-sm mb-2">{alerta.direccion}</p>
+                      <div className="grid grid-cols-3 gap-4 mb-2">
+                        <div><span className="text-xs text-gray-500">Ocupación:</span><br/>{alerta.porcentajeOcupado}%</div>
+                        <div><span className="text-xs text-gray-500">Disponibles:</span><br/><span className="text-green-600">{alerta.capacidadDisponible}</span></div>
+                        <div><span className="text-xs text-gray-500">Total:</span><br/>{alerta.capacidadTotal}</div>
                       </div>
-
-                      {/* Barra de progreso */}
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                         <div
                           className={`h-2 rounded-full ${
                             alerta.porcentajeOcupado >= 95 ? 'bg-red-600' :
-                            alerta.porcentajeOcupado >= 85 ? 'bg-orange-500' :
-                            'bg-yellow-500'
+                            alerta.porcentajeOcupado >= 85 ? 'bg-orange-500' : 'bg-yellow-500'
                           }`}
                           style={{ width: `${alerta.porcentajeOcupado}%` }}
                         ></div>
                       </div>
-
-                      <p className="text-sm text-gray-500">
-                        Alerta generada: {new Date(alerta.fechaAlerta).toLocaleString()}
-                      </p>
                     </div>
                   </div>
-
                   <div className="flex space-x-2">
                     {!alerta.leida && (
-                      <button
-                        onClick={() => marcarComoLeida(alerta.id)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-full"
-                        title="Marcar como leída"
-                      >
+                      <button onClick={() => marcarComoLeida(alerta.id)} className="text-green-600 hover:text-green-800">
                         <CheckCircle className="size-5" />
                       </button>
                     )}
-                    <button
-                      onClick={() => eliminarAlerta(alerta.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-full"
-                      title="Eliminar alerta"
-                    >
+                    <button onClick={() => eliminarAlerta(alerta.id)} className="text-red-600 hover:text-red-800">
                       <X className="size-5" />
                     </button>
                   </div>
@@ -389,30 +418,19 @@ const AlertasCapacidad = () => {
             <div className="text-center py-8">
               <Bell className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No hay alertas</h3>
-              <p className="text-gray-500">
-                {filtroEstado === 'no-leidas' ? 
-                  'Todas las alertas han sido leídas' : 
-                  'No se encontraron alertas con los filtros seleccionados'
-                }
-              </p>
+              <p className="text-gray-500">No se encontraron alertas con los filtros seleccionados</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modal de Configuración */}
       {showSettings && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Configuración de Alertas
-            </h3>
-            
+            <h3 className="text-lg font-medium mb-4">Configuración de Alertas</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Umbral Crítico (% ocupado)
-                </label>
+                <label className="block text-sm font-medium mb-1">Umbral Crítico (%)</label>
                 <input
                   type="range"
                   min="50"
@@ -421,13 +439,10 @@ const AlertasCapacidad = () => {
                   onChange={(e) => setConfiguracion({...configuracion, umbralCritico: parseInt(e.target.value)})}
                   className="w-full"
                 />
-                <div className="text-center text-sm text-gray-600">{configuracion.umbralCritico}%</div>
+                <div className="text-center text-sm">{configuracion.umbralCritico}%</div>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Umbral Alto (% ocupado)
-                </label>
+                <label className="block text-sm font-medium mb-1">Umbral Alto (%)</label>
                 <input
                   type="range"
                   min="50"
@@ -436,13 +451,10 @@ const AlertasCapacidad = () => {
                   onChange={(e) => setConfiguracion({...configuracion, umbralAlto: parseInt(e.target.value)})}
                   className="w-full"
                 />
-                <div className="text-center text-sm text-gray-600">{configuracion.umbralAlto}%</div>
+                <div className="text-center text-sm">{configuracion.umbralAlto}%</div>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Umbral Medio (% ocupado)
-                </label>
+                <label className="block text-sm font-medium mb-1">Umbral Medio (%)</label>
                 <input
                   type="range"
                   min="50"
@@ -451,67 +463,47 @@ const AlertasCapacidad = () => {
                   onChange={(e) => setConfiguracion({...configuracion, umbralMedio: parseInt(e.target.value)})}
                   className="w-full"
                 />
-                <div className="text-center text-sm text-gray-600">{configuracion.umbralMedio}%</div>
+                <div className="text-center text-sm">{configuracion.umbralMedio}%</div>
               </div>
-
               <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="notificaciones"
                   checked={configuracion.notificacionesActivas}
                   onChange={(e) => setConfiguracion({...configuracion, notificacionesActivas: e.target.checked})}
-                  className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="mr-2"
                 />
-                <label htmlFor="notificaciones" className="text-sm font-medium text-gray-700">
-                  Activar notificaciones push
-                </label>
+                <label htmlFor="notificaciones">Notificaciones push</label>
               </div>
-
               <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="sonido"
                   checked={configuracion.sonidoActivo}
                   onChange={(e) => setConfiguracion({...configuracion, sonidoActivo: e.target.checked})}
-                  className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="mr-2"
                 />
-                <label htmlFor="sonido" className="text-sm font-medium text-gray-700">
-                  Activar sonido de alerta
-                </label>
+                <label htmlFor="sonido">Sonido de alerta</label>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Intervalo de actualización (minutos)
-                </label>
+                <label className="block text-sm font-medium mb-1">Intervalo (minutos)</label>
                 <select
                   value={configuracion.intervaloActualizacion}
                   onChange={(e) => setConfiguracion({...configuracion, intervaloActualizacion: parseInt(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border rounded-md"
                 >
                   <option value={1}>1 minuto</option>
                   <option value={5}>5 minutos</option>
                   <option value={10}>10 minutos</option>
                   <option value={15}>15 minutos</option>
-                  <option value={30}>30 minutos</option>
                 </select>
               </div>
             </div>
-
             <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowSettings(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
+              <button onClick={() => setShowSettings(false)} className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
                 Cancelar
               </button>
-              <button
-                onClick={() => {
-                  setShowSettings(false);
-                  toast.success('Configuración guardada');
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+              <button onClick={() => { setShowSettings(false); toast.success('Configuración guardada'); }} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                 Guardar
               </button>
             </div>

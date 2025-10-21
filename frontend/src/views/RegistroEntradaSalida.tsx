@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Car, Clock, User, MapPin, LogIn, LogOut, Search, Plus, Calendar, CheckCircle, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Car, Clock, User, MapPin, LogIn, LogOut, Search } from 'lucide-react';
 import { entradaService, salidaService, parqueaderoService } from '../services/index';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
@@ -59,11 +59,46 @@ const RegistroEntradaSalida = () => {
     cargarDatos();
   }, []);
 
+  const cargarEntradasActivas = useCallback(async () => {
+    try {
+      // Simular carga de entradas activas
+      const entradasMock: EntradaActiva[] = [
+        {
+          id: 1,
+          vehiculoId: 1,
+          placa: 'ABC123',
+          tipoVehiculo: 'carro',
+          propietario: 'Juan Pérez',
+          parqueaderoId: 1,
+          nombreParqueadero: 'Parqueadero Central',
+          espacioAsignado: 'A-15',
+          fechaHoraEntrada: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          controlador: 'Sistema'
+        },
+        {
+          id: 2,
+          vehiculoId: 3,
+          placa: 'DEF456',
+          tipoVehiculo: 'carro',
+          propietario: 'Carlos López',
+          parqueaderoId: 2,
+          nombreParqueadero: 'Plaza Norte',
+          espacioAsignado: 'B-08',
+          fechaHoraEntrada: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+          controlador: 'María García'
+        }
+      ];
+      setEntradasActivas(entradasMock);
+    } catch (error) {
+      toast.error('Error cargando entradas activas');
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === 'salida') {
       cargarEntradasActivas();
     }
-  }, [activeTab]);
+  }, [activeTab, cargarEntradasActivas]);
 
   useEffect(() => {
     // Filtrar vehículos basado en la búsqueda
@@ -103,41 +138,6 @@ const RegistroEntradaSalida = () => {
       toast.error('Error cargando datos iniciales');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const cargarEntradasActivas = async () => {
-    try {
-      // Simular carga de entradas activas
-      const entradasMock: EntradaActiva[] = [
-        {
-          id: 1,
-          vehiculoId: 1,
-          placa: 'ABC123',
-          tipoVehiculo: 'carro',
-          propietario: 'Juan Pérez',
-          parqueaderoId: 1,
-          nombreParqueadero: 'Parqueadero Central',
-          espacioAsignado: 'A-15',
-          fechaHoraEntrada: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // hace 2 horas
-          controlador: user?.nombre || 'Sistema'
-        },
-        {
-          id: 2,
-          vehiculoId: 3,
-          placa: 'DEF456',
-          tipoVehiculo: 'carro',
-          propietario: 'Carlos López',
-          parqueaderoId: 2,
-          nombreParqueadero: 'Plaza Norte',
-          espacioAsignado: 'B-08',
-          fechaHoraEntrada: new Date(Date.now() - 45 * 60 * 1000).toISOString(), // hace 45 minutos
-          controlador: 'María García'
-        }
-      ];
-      setEntradasActivas(entradasMock);
-    } catch (error) {
-      toast.error('Error cargando entradas activas');
     }
   };
 

@@ -94,14 +94,25 @@ CREATE TABLE tarifas (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de festivos
+CREATE TABLE festivos (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    fecha DATE NOT NULL UNIQUE,
+    descripcion TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Tabla de horarios de atención
 CREATE TABLE horarios (
     id SERIAL PRIMARY KEY,
     id_parqueadero INTEGER REFERENCES parqueaderos(id) ON DELETE CASCADE,
-    dia_semana VARCHAR(20) CHECK (dia_semana IN ('LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO')) NOT NULL,
+    dia_semana VARCHAR(20) CHECK (dia_semana IN ('LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO', 'FESTIVO')),
     hora_apertura TIME NOT NULL,
     hora_cierre TIME NOT NULL,
     activo BOOLEAN DEFAULT TRUE,
+    es_festivo BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -168,6 +179,7 @@ CREATE INDEX idx_parqueaderos_usuarios_parqueadero ON parqueaderos_usuarios(id_p
 CREATE INDEX idx_parqueaderos_usuarios_usuario ON parqueaderos_usuarios(id_usuario);
 CREATE INDEX idx_tarifas_vigencia ON tarifas(fecha_inicio, fecha_fin);
 CREATE INDEX idx_horarios_parqueadero ON horarios(id_parqueadero);
+CREATE INDEX idx_festivos_fecha ON festivos(fecha);
 CREATE INDEX idx_alianzas_parqueadero ON alianzas(id_parqueadero);
 CREATE INDEX idx_vehiculos_suscripciones_vehiculo ON vehiculos_suscripciones(id_vehiculo);
 CREATE INDEX idx_vehiculos_suscripciones_fecha ON vehiculos_suscripciones(fecha_inicio, fecha_fin);
@@ -204,6 +216,9 @@ CREATE TRIGGER update_tarifas_updated_at BEFORE UPDATE ON tarifas
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_horarios_updated_at BEFORE UPDATE ON horarios
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_festivos_updated_at BEFORE UPDATE ON festivos
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_registros_updated_at BEFORE UPDATE ON registros
@@ -253,6 +268,57 @@ CREATE TRIGGER check_espacio_ingreso BEFORE INSERT ON registros
 CREATE TRIGGER liberar_espacio_update BEFORE UPDATE ON registros
     FOR EACH ROW EXECUTE FUNCTION liberar_espacio_salida();
 
+-- Función para obtener el horario aplicable según fecha
+CREATE OR REPLACE FUNCTION obtener_horario_aplicable(
+    p_id_parqueadero INTEGER,
+    p_fecha DATE
+)
+RETURNS TABLE (
+    id INTEGER,
+    hora_apertura TIME,
+    hora_cierre TIME,
+    tipo_dia VARCHAR(20)
+) AS $$
+DECLARE
+    v_es_festivo BOOLEAN;
+    v_dia_semana VARCHAR(20);
+BEGIN
+    -- Verificar si la fecha es festivo
+    v_es_festivo := es_fecha_festivo(p_fecha);
+    
+    IF v_es_festivo THEN
+        -- Buscar horario de festivo
+        RETURN QUERY
+        SELECT h.id, h.hora_apertura, h.hora_cierre, 'FESTIVO'::VARCHAR(20)
+        FROM horarios h
+        WHERE h.id_parqueadero = p_id_parqueadero
+          AND h.es_festivo = TRUE
+          AND h.activo = TRUE
+        LIMIT 1;
+    ELSE
+        -- Obtener día de la semana
+        v_dia_semana := CASE EXTRACT(DOW FROM p_fecha)
+            WHEN 0 THEN 'DOMINGO'
+            WHEN 1 THEN 'LUNES'
+            WHEN 2 THEN 'MARTES'
+            WHEN 3 THEN 'MIERCOLES'
+            WHEN 4 THEN 'JUEVES'
+            WHEN 5 THEN 'VIERNES'
+            WHEN 6 THEN 'SABADO'
+        END;
+        
+        -- Buscar horario del día de la semana
+        RETURN QUERY
+        SELECT h.id, h.hora_apertura, h.hora_cierre, v_dia_semana
+        FROM horarios h
+        WHERE h.id_parqueadero = p_id_parqueadero
+          AND h.dia_semana = v_dia_semana
+          AND h.activo = TRUE
+        LIMIT 1;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
 COMMENT ON DATABASE parqueadero_db IS 'Base de datos para sistema de gestión de parqueaderos ParkNow';
 COMMENT ON TABLE usuarios IS 'Usuarios del sistema (administradores y controladores)';
 COMMENT ON TABLE tipos_vehiculos IS 'Catálogo de tipos de vehículos';
@@ -261,8 +327,23 @@ COMMENT ON TABLE parqueaderos_usuarios IS 'Asignación de controladores a parque
 COMMENT ON TABLE vehiculos IS 'Registro de vehículos';
 COMMENT ON TABLE espacios IS 'Espacios individuales de cada parqueadero';
 COMMENT ON TABLE tarifas IS 'Tarifas por parqueadero';
+COMMENT ON TABLE festivos IS 'Días festivos del año';
 COMMENT ON TABLE horarios IS 'Horarios de atención de los parqueaderos';
 COMMENT ON TABLE registros IS 'Registro unificado de entradas y salidas de vehículos';
 COMMENT ON TABLE alianzas IS 'Alianzas comerciales con descuentos';
 COMMENT ON TABLE suscripciones IS 'Planes de suscripción disponibles';
 COMMENT ON TABLE vehiculos_suscripciones IS 'Suscripciones activas de vehículos';
+
+-- NOTA: Los festivos se sincronizan automáticamente desde la API de Colombia
+-- Usar el endpoint: POST /api/festivos/sincronizar/auto
+-- O manualmente: POST /api/festivos/sincronizar/{year}
+
+-- Función para verificar si una fecha es festivo
+CREATE OR REPLACE FUNCTION es_fecha_festivo(fecha_consulta DATE)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS(
+        SELECT 1 FROM festivos WHERE fecha = fecha_consulta
+    );
+END;
+$$ LANGUAGE plpgsql;

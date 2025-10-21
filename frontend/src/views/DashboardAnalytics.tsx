@@ -8,16 +8,13 @@ import {
   AlertTriangle, 
   DollarSign,
   Calendar,
-  ChevronDown,
   Activity,
   BarChart3,
-  PieChart,
   Zap,
   CheckCircle
 } from 'lucide-react';
 import CountUp from 'react-countup';
-import { parqueaderoService, reporteService, entradaService } from '../services/index';
-import { useAuth } from '../context/AuthContext';
+import { parqueaderoService, entradaService } from '../services/index';
 import '../assets/scss/parknow-colors.css';
 
 interface DashboardStats {
@@ -65,7 +62,7 @@ const DashboardAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('today');
 
-  const { user } = useAuth();
+  // const { user } = useAuth();
 
   // Memoizamos la función cargarDatosDashboard para evitar recreaciones innecesarias
   const cargarDatosDashboardMemo = React.useCallback(async () => {
@@ -220,7 +217,7 @@ const DashboardAnalytics = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod]); // Dependencia en selectedPeriod para que se recree cuando cambie
+  }, []); // Sin dependencias para evitar recreaciones innecesarias
 
   useEffect(() => {
     // Cargar datos al montar el componente o cuando cambie selectedPeriod
@@ -235,10 +232,10 @@ const DashboardAnalytics = () => {
 
   // Función para cargar datos manualmente, ahora solo se usa cuando el usuario
   // explícitamente solicita una recarga de datos (no en intervalos automáticos)
-  const cargarDatosDashboard = () => {
-    // Llamamos a la versión memoizada
-    cargarDatosDashboardMemo();
-  };
+  // const cargarDatosDashboard = () => {
+  //   // Llamamos a la versión memoizada
+  //   cargarDatosDashboardMemo();
+  // };
 
   const getStatusColor = (status: string) => {
     switch (status) {

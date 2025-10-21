@@ -23,12 +23,13 @@ import { createSelector } from 'reselect';
 import * as Yup from "yup";
 import { useFormik } from "formik";
 
-import {
-    getUserList as onGetUserList,
-    addUserList as onAddUserList,
-    updateUserList as onUpdateUserList,
-    deleteUserList as onDeleteUserList
-} from 'slices/thunk';
+// NOTE: This file is not used in ParkNow - we use UsuariosListView.tsx instead
+// Mock functions to allow compilation
+const onGetUserList = () => ({ type: 'MOCK' });
+const onAddUserList = (data: any) => ({ type: 'MOCK', payload: data });
+const onUpdateUserList = (data: any) => ({ type: 'MOCK', payload: data });
+const onDeleteUserList = (id: any) => ({ type: 'MOCK', payload: id });
+
 import { ToastContainer } from 'react-toastify';
 import filterDataBySearch from 'Common/filterDataBySearch';
 

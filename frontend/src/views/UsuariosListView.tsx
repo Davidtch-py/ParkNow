@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Eye, Trash2, Plus, MoreHorizontal, FileEdit, CheckCircle, X, UserCheck } from 'lucide-react';
-import { authService, usuarioService } from '../services/index';
+import { Search, Plus, Trash2, X, CheckCircle, UserCheck, FileEdit } from 'lucide-react';
+import { usuarioService } from '../services/index';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
@@ -36,10 +36,12 @@ const UsuariosListView = () => {
     if (isAdmin) {
       cargarUsuarios();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   useEffect(() => {
     filtrarUsuarios();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarios, searchTerm, filterRol]);
 
   const cargarUsuarios = async () => {
@@ -280,6 +282,7 @@ const UsuariosListView = () => {
 
 
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const StatusBadge = ({ activo }: { activo: boolean }) => {
     return activo ? (
       <span className="px-2.5 py-0.5 text-xs font-medium rounded border bg-green-100 border-green-300 text-green-700 inline-flex items-center">
