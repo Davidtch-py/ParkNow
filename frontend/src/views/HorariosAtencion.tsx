@@ -352,7 +352,7 @@ const HorariosAtencion = () => {
                       )}
                       <span className={`font-medium ${item.activo ? (item.esFestivo ? 'text-amber-900' : 'text-gray-900') : 'text-gray-400'}`}>
                         {item.dia}
-                        {item.esFestivo && <span className="ml-2 text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded">🎉 Festivo</span>}
+                        {item.esFestivo}
                       </span>
                     </div>
                     <div className={`text-sm ${item.activo ? (item.esFestivo ? 'text-amber-700' : 'text-gray-700') : 'text-gray-400'}`}>
@@ -409,21 +409,37 @@ const HorariosAtencion = () => {
               </div>
 
               {/* Acciones rápidas */}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3 items-center">
                 <button
                   type="button"
                   onClick={aplicarATodos}
-                  className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
+                  title="Aplicar horario de lunes a todos"
+                  aria-label="Aplicar horario a todos los días"
+                  className="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 >
-                  Aplicar horario de lunes a todos
+                  <CheckCircle className="size-4 mr-2" />
+                  Aplicar a todos horario del lunes
                 </button>
+
                 <button
                   type="button"
                   onClick={setHorario24h}
-                  className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
+                  title="Configurar 24 horas"
+                  aria-label="Configurar horario 24 horas"
+                  className="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm"
                 >
-                  Configurar 24 horas
+                  <Calendar className="size-4 mr-2" />
+                 configurar 24 horas
                 </button>
+
+                {/* Variante menos llamativa (opcional) */}
+                {/* <button
+                  type="button"
+                  onClick={aplicarATodos}
+                  className="inline-flex items-center px-3 py-1 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100"
+                >
+                  Aplicar horario de lunes a todos
+                </button> */}
               </div>
 
               {/* Configuración por día */}
@@ -438,9 +454,7 @@ const HorariosAtencion = () => {
                 {formData.map((item, index) => (
                   <div 
                     key={item.dia} 
-                    className={`grid grid-cols-12 gap-4 items-center p-3 rounded-md ${
-                      item.esFestivo ? 'bg-amber-50 border-2 border-amber-200' : 'bg-gray-50'
-                    }`}
+                    className="grid grid-cols-12 gap-4 items-center p-3 rounded-md bg-gray-50"
                   >
                     <div className="col-span-3">
                       <label className="flex items-center">
@@ -448,13 +462,11 @@ const HorariosAtencion = () => {
                           type="checkbox"
                           checked={item.activo}
                           onChange={(e) => updateHorarioItem(index, 'activo', e.target.checked)}
-                          className={`mr-2 h-4 w-4 border-gray-300 rounded focus:ring-blue-500 ${
-                            item.esFestivo ? 'text-amber-600' : 'text-blue-600'
-                          }`}
+                          className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         />
-                        <span className={`font-medium ${item.esFestivo ? 'text-amber-900' : 'text-gray-700'}`}>
+                        <span className="font-medium text-gray-700">
                           {item.dia}
-                          {item.esFestivo && <span className="ml-2 text-xs">🎉</span>}
+                          {item.esFestivo }
                         </span>
                       </label>
                     </div>
