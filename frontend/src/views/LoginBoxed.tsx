@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { LogIn, Car, Eye, EyeOff, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { toast } from 'react-toastify';
 import '../assets/scss/parknow-colors.css';
+import logo from '../assets/images/icon_ParkNow_horiz.png';
 
 const LoginBoxed = () => {
   const [email, setEmail] = useState('');
@@ -16,20 +17,20 @@ const LoginBoxed = () => {
     email: '',
     password: ''
   });
-  
+
   const { login, isAuthenticated } = useAuth();
 
   // Log para debuggear recargas
   React.useEffect(() => {
     console.log('🔄 LoginBoxed component mounted/re-rendered');
-    
+
     // Detectar si la página se está recargando
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       console.log('⚠️ Página está siendo recargada!');
     };
-    
+
     window.addEventListener('beforeunload', handleBeforeUnload);
-    
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
@@ -71,7 +72,7 @@ const LoginBoxed = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation(); // Evitar propagación del evento
-    
+
     // Limpiar errores previos
     setError('');
     setValidationErrors({ email: '', password: '' });
@@ -88,11 +89,11 @@ const LoginBoxed = () => {
     try {
       const result = await login(email, password);
       console.log('📡 Respuesta del login:', result);
-      
+
       if (!result.success) {
         // Evitar recarga de página - manejo de errores mejorado
         let errorMessage = 'Credenciales inválidas';
-        
+
         // Mapear errores específicos del backend
         if (result.error?.toLowerCase().includes('usuario no encontrado')) {
           errorMessage = 'El correo electrónico no está registrado en el sistema';
@@ -106,7 +107,7 @@ const LoginBoxed = () => {
           // Usar el mensaje exacto del backend
           errorMessage = result.error;
         }
-        
+
         // Mostrar error SIN recargar la página
         setError(errorMessage);
         toast.error(errorMessage, {
@@ -117,7 +118,7 @@ const LoginBoxed = () => {
           pauseOnHover: true,
           draggable: true,
         });
-        
+
         // NO hacer return aquí para evitar cualquier recarga
         console.log('❌ Login falló:', errorMessage);
         return false; // Prevent any default behavior
@@ -142,14 +143,14 @@ const LoginBoxed = () => {
     } finally {
       setLoading(false);
     }
-    
+
     return false; // Always prevent default form behavior
   };
 
   const fillDemoCredentials = (role: 'admin' | 'controlador') => {
     setError(''); // Limpiar errores al llenar credenciales
     setValidationErrors({ email: '', password: '' });
-    
+
     if (role === 'admin') {
       setEmail('admin@parqueadero.com');
       setPassword('password');
@@ -171,11 +172,11 @@ const LoginBoxed = () => {
               {/* Logo & Header */}
               <div className="text-center mb-8">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{ backgroundColor: 'rgba(152, 202, 229, 0.1)' } as React.CSSProperties}>
-                  <Car className="w-8 h-8" style={{ color: 'rgb(120, 170, 200)' } as React.CSSProperties} />
+                  <Car className="w-8 h-8" style={{ color: 'var(--park-blue)' } as React.CSSProperties} />
                 </div>
-                <h1 className="text-3xl font-bold mb-2" style={{ color: 'rgb(0, 0, 0)' } as React.CSSProperties}>
-                  🚗 ParkNow
-                </h1>
+                <div className="mb-2">
+                  <img src={logo} alt="ParkNow Logo" className="mx-auto h-20 w-auto" />
+                </div>
                 <p className="text-gray-600">Sistema de Gestión de Parqueaderos</p>
               </div>
 
@@ -191,9 +192,9 @@ const LoginBoxed = () => {
               )}
 
               {/* Login Form */}
-              <form 
-                onSubmit={handleSubmit} 
-                className="space-y-6" 
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-6"
                 noValidate
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && e.target !== document.activeElement) {
@@ -202,19 +203,18 @@ const LoginBoxed = () => {
                 }}
               >
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'rgb(0, 0, 0)' } as React.CSSProperties}>
+                  <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: 'var(--park-black)' } as React.CSSProperties}>
                     Email
                   </label>
                   <input
                     id="email"
                     type="email"
                     required
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${
-                      validationErrors.email 
-                        ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${validationErrors.email
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
                         : 'border-gray-300'
-                    }`}
-                    style={{ 
+                      }`}
+                    style={{
                       borderColor: validationErrors.email ? 'rgb(252 165 165)' : 'rgb(209, 213, 219)'
                     } as React.CSSProperties}
                     placeholder="admin@parqueadero.com"
@@ -237,7 +237,7 @@ const LoginBoxed = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'rgb(0, 0, 0)' } as React.CSSProperties}>
+                  <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: 'var(--park-black)' } as React.CSSProperties}>
                     Contraseña
                   </label>
                   <div className="relative">
@@ -245,12 +245,11 @@ const LoginBoxed = () => {
                       id="password"
                       type={showPassword ? 'text' : 'password'}
                       required
-                      className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 transition-colors ${
-                        validationErrors.password 
-                          ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
+                      className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 transition-colors ${validationErrors.password
+                          ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
                           : 'border-gray-300'
-                      }`}
-                      style={{ 
+                        }`}
+                      style={{
                         borderColor: validationErrors.password ? 'rgb(252 165 165)' : 'rgb(209, 213, 219)'
                       } as React.CSSProperties}
                       placeholder="••••••••"
@@ -291,7 +290,7 @@ const LoginBoxed = () => {
                     <input
                       type="checkbox"
                       className="h-4 w-4 rounded border-gray-300 focus:ring-2"
-                      style={{ 
+                      style={{
                         accentColor: 'var(--park-blue)',
                         borderColor: 'var(--park-blue)'
                       }}
@@ -301,7 +300,7 @@ const LoginBoxed = () => {
                     />
                     <span className="ml-2 text-sm text-gray-600">Recordarme</span>
                   </label>
-                  <button type="button" onClick={() => toast.info('Funcionalidad en desarrollo')} className="text-sm transition-colors bg-transparent border-0 cursor-pointer p-0" style={{ color: 'rgb(120, 170, 200)' } as React.CSSProperties}>
+                  <button type="button" onClick={() => toast.info('Funcionalidad en desarrollo')} className="text-sm transition-colors bg-transparent border-0 cursor-pointer p-0" style={{ color: 'var(--park-blue-dark)' } as React.CSSProperties}>
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
@@ -314,12 +313,12 @@ const LoginBoxed = () => {
                     // No need to prevent default here, handleSubmit will handle it
                   }}
                   className="w-full flex items-center justify-center px-4 py-3 text-white font-medium rounded-lg focus:ring-2 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
+                  style={{
                     backgroundColor: 'rgb(152, 202, 229)'
                   } as React.CSSProperties}
                   onMouseEnter={(e) => {
                     if (!loading) {
-                      e.currentTarget.style.backgroundColor = 'rgb(120, 170, 200)';
+                      e.currentTarget.style.backgroundColor = 'var(--park-blue-dark)';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -355,7 +354,7 @@ const LoginBoxed = () => {
                     type="button"
                     onClick={() => fillDemoCredentials('admin')}
                     className="w-full text-left px-3 py-2 text-sm bg-white border rounded transition-all"
-                    style={{ 
+                    style={{
                       borderColor: 'rgb(210, 205, 190)'
                     } as React.CSSProperties}
                     onMouseEnter={(e) => {
@@ -368,7 +367,7 @@ const LoginBoxed = () => {
                     }}
                     disabled={loading}
                   >
-                    <div className="font-medium" style={{ color: 'rgb(120, 170, 200)' } as React.CSSProperties}>
+                    <div className="font-medium" style={{ color: 'var(--park-blue-dark)' } as React.CSSProperties}>
                       👑 Administrador
                     </div>
                     <div className="text-gray-500">admin@parqueadero.com</div>
@@ -377,7 +376,7 @@ const LoginBoxed = () => {
                     type="button"
                     onClick={() => fillDemoCredentials('controlador')}
                     className="w-full text-left px-3 py-2 text-sm bg-white border rounded transition-all"
-                    style={{ 
+                    style={{
                       borderColor: 'rgb(210, 205, 190)'
                     } as React.CSSProperties}
                     onMouseEnter={(e) => {
@@ -413,11 +412,11 @@ const LoginBoxed = () => {
                 <p className="text-lg mb-8 leading-relaxed" style={{ color: 'rgb(0, 0, 0)', opacity: 0.8 } as React.CSSProperties}>
                   Controla y administra tus parqueaderos de manera eficiente con nuestro sistema integral de gestión.
                 </p>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" 
-                         style={{ backgroundColor: 'rgb(152, 202, 229)' } as React.CSSProperties}>
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: 'rgb(152, 202, 229)' } as React.CSSProperties}>
                       <CheckCircle className="w-4 h-4 text-white" />
                     </div>
                     <div>
@@ -429,10 +428,10 @@ const LoginBoxed = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" 
-                         style={{ backgroundColor: 'rgb(152, 202, 229)' } as React.CSSProperties}>
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: 'rgb(152, 202, 229)' } as React.CSSProperties}>
                       <CheckCircle className="w-4 h-4 text-white" />
                     </div>
                     <div>
@@ -444,10 +443,10 @@ const LoginBoxed = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" 
-                         style={{ backgroundColor: 'rgb(152, 202, 229)' } as React.CSSProperties}>
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: 'rgb(152, 202, 229)' } as React.CSSProperties}>
                       <CheckCircle className="w-4 h-4 text-white" />
                     </div>
                     <div>
@@ -459,17 +458,17 @@ const LoginBoxed = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" 
-                         style={{ backgroundColor: 'rgb(152, 202, 229)' } as React.CSSProperties}>
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: 'rgb(152, 202, 229)' } as React.CSSProperties}>
                       <CheckCircle className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold mb-1" style={{ color: 'rgb(0, 0, 0)' } as React.CSSProperties}>
+                      <h3 className="font-semibold mb-1" style={{ color: 'var(--park-black)' } as React.CSSProperties}>
                         Alertas Inteligentes
                       </h3>
-                      <p className="text-sm" style={{ color: 'rgb(0, 0, 0)', opacity: 0.7 } as React.CSSProperties}>
+                      <p className="text-sm" style={{ color: 'var(--park-black)', opacity: 0.7 } as React.CSSProperties}>
                         Recibe notificaciones cuando la capacidad sea limitada
                       </p>
                     </div>

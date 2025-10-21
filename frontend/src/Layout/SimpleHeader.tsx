@@ -60,8 +60,8 @@ const SimpleHeader = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center space-x-2 p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none"
             >
-              <div className="size-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <User className="size-5 text-blue-600" />
+              <div className="size-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--park-blue)' }}>
+                <User className="size-5 text-blue-600" style={{ color: 'var(--park-black)' }} />
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium">{user?.nombre || 'Usuario'}</p>
