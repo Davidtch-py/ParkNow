@@ -127,15 +127,10 @@ export const MQTTProvider: React.FC<MQTTProviderProps> = ({ children }) => {
       
       const mqttClient = mqtt.connect(mqttUrl, mqttOptions);
 
-      mqttClient.on('connect', () => {
-        console.log('✅ Conectado a MQTT Broker');
-        setIsConnected(true);
-        toast.success('Conectado al sistema de notificaciones en tiempo real', {
-          autoClose: 2000,
-          position: 'bottom-right'
-        });
-      });
-
+            mqttClient.on('connect', () => {
+              console.log('✅ Conectado a MQTT Broker');
+              setIsConnected(true);
+            });
       mqttClient.on('message', (topic, message) => {
         try {
           const data = JSON.parse(message.toString());
