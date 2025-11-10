@@ -2,18 +2,27 @@ import { EntradaUseCase } from '../application/EntradaUseCase.js';
 import { EntradaRepository } from '../persistence/EntradaRepository.js';
 import { VehiculoRepository } from '../persistence/VehiculoRepository.js';
 import { ParqueaderoRepository } from '../persistence/ParqueaderoRepository.js';
+import { EspacioRepository } from '../persistence/EspacioRepository.js';
 import { mqttService } from '../infrastructure/mqttService.js';
 
 const entradaRepository = new EntradaRepository();
 const vehiculoRepository = new VehiculoRepository();
 const parqueaderoRepository = new ParqueaderoRepository();
-const entradaUseCase = new EntradaUseCase(entradaRepository, vehiculoRepository, parqueaderoRepository);
+const espacioRepository = new EspacioRepository();
+const entradaUseCase = new EntradaUseCase(entradaRepository, vehiculoRepository, parqueaderoRepository, espacioRepository);
 
 export class EntradaController {
   async registrar(req, res) {
     try {
       const { vehiculoId, parqueaderoId, espacioAsignado } = req.body;
       const controladorId = req.user.id;
+
+      console.log('📥 Datos recibidos para registrar entrada:', {
+        vehiculoId,
+        parqueaderoId,
+        espacioAsignado,
+        controladorId
+      });
 
       if (!vehiculoId || !parqueaderoId) {
         return res.status(400).json({
@@ -28,6 +37,8 @@ export class EntradaController {
         controladorId,
         espacioAsignado
       });
+
+      console.log('📊 Resultado del registro:', result);
 
       if (result.success) {
         // Enviar notificación MQTT de entrada

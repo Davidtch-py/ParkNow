@@ -214,13 +214,13 @@ const Horario = sequelize.define('Horario', {
   underscored: true
 });
 
-const Entrada = sequelize.define('Entrada', {
+const Registro = sequelize.define('Registro', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  vehiculoId: {
+  id_vehiculo: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
@@ -228,15 +228,7 @@ const Entrada = sequelize.define('Entrada', {
       key: 'id'
     }
   },
-  parqueaderoId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Parqueadero,
-      key: 'id'
-    }
-  },
-  controladorId: {
+  id_usuario: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
@@ -244,62 +236,37 @@ const Entrada = sequelize.define('Entrada', {
       key: 'id'
     }
   },
-  fechaHoraEntrada: {
+  id_espacio: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'espacios',
+      key: 'id'
+    }
+  },
+  fecha_ingreso: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW
   },
-  espacioAsignado: {
-    type: DataTypes.INTEGER,
+  fecha_salida: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  monto_total: {
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: true
   }
 }, {
-  tableName: 'entradas',
+  tableName: 'registros',
   timestamps: true,
   underscored: true
 });
 
-const Salida = sequelize.define('Salida', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
-  },
-  entradaId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    unique: true,
-    references: {
-      model: Entrada,
-      key: 'id'
-    }
-  },
-  fechaHoraSalida: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW
-  },
-  tiempoTotal: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  montoTotal: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false
-  },
-  controladorId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Usuario,
-      key: 'id'
-    }
-  }
-}, {
-  tableName: 'salidas',
-  timestamps: true,
-  underscored: true
-});
+// Añadir método de dominio a Parqueadero
+Parqueadero.prototype.puedeRecibirVehiculo = function() {
+  return (this.capacidadDisponible || 0) > 0;
+};
 
 // Definir asociaciones
 Parqueadero.hasMany(Tarifa, { foreignKey: 'parqueaderoId' });
@@ -308,20 +275,12 @@ Tarifa.belongsTo(Parqueadero, { foreignKey: 'parqueaderoId' });
 Parqueadero.hasMany(Horario, { foreignKey: 'parqueaderoId' });
 Horario.belongsTo(Parqueadero, { foreignKey: 'parqueaderoId' });
 
-Parqueadero.hasMany(Entrada, { foreignKey: 'parqueaderoId' });
-Entrada.belongsTo(Parqueadero, { foreignKey: 'parqueaderoId' });
+// Registro se relaciona con Vehiculo y Usuario
+Vehiculo.hasMany(Registro, { foreignKey: 'id_vehiculo', as: 'registros' });
+Registro.belongsTo(Vehiculo, { foreignKey: 'id_vehiculo', as: 'vehiculo' });
 
-Vehiculo.hasMany(Entrada, { foreignKey: 'vehiculoId' });
-Entrada.belongsTo(Vehiculo, { foreignKey: 'vehiculoId' });
-
-Usuario.hasMany(Entrada, { foreignKey: 'controladorId' });
-Entrada.belongsTo(Usuario, { foreignKey: 'controladorId', as: 'controlador' });
-
-Usuario.hasMany(Salida, { foreignKey: 'controladorId' });
-Salida.belongsTo(Usuario, { foreignKey: 'controladorId', as: 'controlador' });
-
-Entrada.hasOne(Salida, { foreignKey: 'entradaId' });
-Salida.belongsTo(Entrada, { foreignKey: 'entradaId' });
+Usuario.hasMany(Registro, { foreignKey: 'id_usuario', as: 'registros' });
+Registro.belongsTo(Usuario, { foreignKey: 'id_usuario', as: 'controlador' });
 
 // Definición del modelo Espacio
 const Espacio = sequelize.define('Espacio', {
@@ -330,39 +289,26 @@ const Espacio = sequelize.define('Espacio', {
     primaryKey: true,
     autoIncrement: true
   },
-  parqueaderoId: {
+  id_parqueadero: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    field: 'id_parqueadero',
     references: {
       model: Parqueadero,
       key: 'id'
     }
   },
-  numero: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  tipoVehiculo: {
-    type: DataTypes.STRING(20),
+  codigo_espacio: {
+    type: DataTypes.STRING(10),
     allowNull: false,
-    validate: {
-      isIn: [['carro', 'moto', 'bicicleta']]
-    }
+    field: 'codigo_espacio'
   },
   estado: {
     type: DataTypes.STRING(20),
     allowNull: false,
-    defaultValue: 'DISPONIBLE',
+    defaultValue: 'LIBRE',
     validate: {
-      isIn: [['DISPONIBLE', 'OCUPADO', 'MANTENIMIENTO']]
-    }
-  },
-  vehiculoId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: {
-      model: Vehiculo,
-      key: 'id'
+      isIn: [['LIBRE', 'OCUPADO', 'RESERVADO', 'FUERA_SERVICIO']]
     }
   }
 }, {
@@ -372,10 +318,12 @@ const Espacio = sequelize.define('Espacio', {
 });
 
 // Agregar asociaciones para Espacio
-Parqueadero.hasMany(Espacio, { foreignKey: 'parqueaderoId', as: 'espacios' });
-Espacio.belongsTo(Parqueadero, { foreignKey: 'parqueaderoId', as: 'parqueadero' });
-Vehiculo.hasMany(Espacio, { foreignKey: 'vehiculoId', as: 'espaciosOcupados' });
-Espacio.belongsTo(Vehiculo, { foreignKey: 'vehiculoId', as: 'vehiculo' });
+Parqueadero.hasMany(Espacio, { foreignKey: 'id_parqueadero', as: 'espacios' });
+Espacio.belongsTo(Parqueadero, { foreignKey: 'id_parqueadero', as: 'parqueadero' });
+
+// Registro se relaciona con Espacio
+Espacio.hasMany(Registro, { foreignKey: 'id_espacio', as: 'registros' });
+Registro.belongsTo(Espacio, { foreignKey: 'id_espacio', as: 'espacio' });
 
 export {
   sequelize,
@@ -384,7 +332,6 @@ export {
   Vehiculo,
   Tarifa,
   Horario,
-  Entrada,
-  Salida,
-  Espacio
+  Espacio,
+  Registro
 };
