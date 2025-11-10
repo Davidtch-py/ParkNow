@@ -17,12 +17,7 @@ export class VehiculoRepository {
   async findById(id) {
     try {
       const vehiculo = await Vehiculo.findByPk(id);
-      
-      if (!vehiculo) {
-        throw new Error('Vehículo no encontrado');
-      }
-      
-      return vehiculo;
+      return vehiculo; // Retorna null si no encuentra, en lugar de lanzar error
     } catch (error) {
       throw new Error(`Error al obtener vehículo: ${error.message}`);
     }

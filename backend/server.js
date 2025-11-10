@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { sequelize, Usuario, Parqueadero, Vehiculo, Tarifa, Horario, Entrada } from './persistence/models.js';
+import { sequelize, Usuario, Parqueadero, Vehiculo, Tarifa, Horario, Registro } from './persistence/models.js';
 import { authMiddleware, adminMiddleware } from './infrastructure/authMiddleware.js';
 import { errorHandler, notFoundHandler } from './infrastructure/errorHandler.js';
 import { mqttService } from './infrastructure/mqttService.js';

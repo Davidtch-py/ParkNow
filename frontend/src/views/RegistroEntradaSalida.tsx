@@ -61,44 +61,71 @@ const RegistroEntradaSalida = () => {
 
   const cargarEntradasActivas = useCallback(async () => {
     try {
-      // Simular carga de entradas activas
-      const entradasMock: EntradaActiva[] = [
-        {
-          id: 1,
-          vehiculoId: 1,
-          placa: 'ABC123',
-          tipoVehiculo: 'carro',
-          propietario: 'Juan Pérez',
-          parqueaderoId: 1,
-          nombreParqueadero: 'Parqueadero Central',
-          espacioAsignado: 'A-15',
-          fechaHoraEntrada: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          controlador: 'Sistema'
-        },
-        {
-          id: 2,
-          vehiculoId: 3,
-          placa: 'DEF456',
-          tipoVehiculo: 'carro',
-          propietario: 'Carlos López',
-          parqueaderoId: 2,
-          nombreParqueadero: 'Plaza Norte',
-          espacioAsignado: 'B-08',
-          fechaHoraEntrada: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-          controlador: 'María García'
+      setLoading(true);
+      
+      console.log('🔍 Cargando entradas activas...');
+      console.log('📍 ParqueaderoId seleccionado:', formEntrada.parqueaderoId);
+      
+      // Si hay un parqueadero seleccionado, cargar sus entradas activas
+      if (formEntrada.parqueaderoId) {
+        console.log('📡 Llamando a API: /entradas/parqueadero/' + formEntrada.parqueaderoId + '/activas');
+        const response = await entradaService.getActivas(formEntrada.parqueaderoId);
+        
+        console.log('📥 Respuesta de API:', response);
+        
+        if (response.success && response.entradas) {
+          console.log('📊 Entradas encontradas en BD:', response.entradas.length);
+          console.log('📋 Datos de entradas:', response.entradas);
+          
+          // Mapear las entradas desde la estructura de la BD (tabla registros)
+          const entradasFormateadas: EntradaActiva[] = response.entradas.map((entrada: any) => {
+            console.log('🔄 Mapeando entrada:', entrada);
+            return {
+              id: entrada.id,
+              vehiculoId: entrada.id_vehiculo || entrada.vehiculoId,
+              placa: entrada.vehiculo?.placa || entrada.Vehiculo?.placa || 'N/A',
+              tipoVehiculo: entrada.vehiculo?.tipo || entrada.Vehiculo?.tipo || 'N/A',
+              propietario: entrada.vehiculo?.propietario || entrada.Vehiculo?.propietario || 'N/A',
+              parqueaderoId: entrada.espacio?.parqueadero?.id || entrada.parqueaderoId || 0,
+              nombreParqueadero: entrada.espacio?.parqueadero?.nombre || entrada.Parqueadero?.nombre || 'N/A',
+              espacioAsignado: entrada.id_espacio ? `Espacio ${entrada.id_espacio}` : 'Sin asignar',
+              fechaHoraEntrada: entrada.fecha_ingreso || entrada.fechaHoraEntrada,
+              controlador: entrada.controlador?.nombre || entrada.Usuario?.nombre || 'N/A'
+            };
+          });
+          
+          console.log('✅ Entradas formateadas:', entradasFormateadas);
+          setEntradasActivas(entradasFormateadas);
+          console.log('✅ Entradas activas cargadas:', entradasFormateadas.length);
+        } else {
+          console.log('⚠️ No se encontraron entradas o success=false');
+          setEntradasActivas([]);
         }
-      ];
-      setEntradasActivas(entradasMock);
+      } else {
+        console.log('⚠️ No hay parqueadero seleccionado, limpiando lista');
+        setEntradasActivas([]);
+      }
     } catch (error) {
+      console.error('❌ Error cargando entradas activas:', error);
       toast.error('Error cargando entradas activas');
+      setEntradasActivas([]);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [formEntrada.parqueaderoId]);
 
   useEffect(() => {
     if (activeTab === 'salida') {
       cargarEntradasActivas();
     }
   }, [activeTab, cargarEntradasActivas]);
+
+  // Recargar entradas activas cuando cambie el parqueadero seleccionado
+  useEffect(() => {
+    if (formEntrada.parqueaderoId && activeTab === 'salida') {
+      cargarEntradasActivas();
+    }
+  }, [formEntrada.parqueaderoId, activeTab, cargarEntradasActivas]);
 
   useEffect(() => {
     // Filtrar vehículos basado en la búsqueda
@@ -133,6 +160,11 @@ const RegistroEntradaSalida = () => {
       ];
       setVehiculos(vehiculosMock);
       setFilteredVehiculos(vehiculosMock);
+
+      // Cargar entradas activas si hay parqueadero seleccionado
+      if (formEntrada.parqueaderoId) {
+        await cargarEntradasActivas();
+      }
 
     } catch (error) {
       toast.error('Error cargando datos iniciales');
@@ -202,10 +234,29 @@ const RegistroEntradaSalida = () => {
     try {
       setLoading(true);
       
+      console.log('🚀 Registrando salida...');
+      console.log('📍 formEntrada.parqueaderoId:', formEntrada.parqueaderoId);
+      console.log('📍 entrada.parqueaderoId:', entrada.parqueaderoId);
+      console.log('📍 entrada completa:', entrada);
+      
+      // Usar el parqueaderoId de la entrada si no hay uno seleccionado en el formulario
+      const parqueaderoId = formEntrada.parqueaderoId || entrada.parqueaderoId;
+      
+      console.log('📍 parqueaderoId final:', parqueaderoId);
+      
+      if (!parqueaderoId) {
+        toast.error('Debe seleccionar un parqueadero');
+        setLoading(false);
+        return;
+      }
+      
       const salidaData = {
         entradaId: entrada.id,
+        parqueaderoId: parseInt(parqueaderoId.toString()), // Convertir a número
         observaciones: observacionesSalida
       };
+      
+      console.log('📤 Enviando datos de salida:', salidaData);
 
       const result = await salidaService.registrar(salidaData);
       
@@ -484,11 +535,43 @@ const RegistroEntradaSalida = () => {
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">Vehículos Actualmente Estacionados</h3>
-            <p className="text-sm text-gray-600 mt-1">Selecciona un vehículo para registrar su salida</p>
+            <p className="text-sm text-gray-600 mt-1">Selecciona un parqueadero y luego un vehículo para registrar su salida</p>
           </div>
           
           <div className="p-6">
-            {entradasActivas.length > 0 ? (
+            {/* Selector de Parqueadero */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Parqueadero
+              </label>
+              <select
+                value={formEntrada.parqueaderoId}
+                onChange={(e) => {
+                  console.log('🔄 Cambiando parqueadero a:', e.target.value);
+                  setFormEntrada({...formEntrada, parqueaderoId: e.target.value});
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Selecciona un parqueadero</option>
+                {parqueaderos.map((parqueadero) => (
+                  <option key={parqueadero.id} value={parqueadero.id}>
+                    {parqueadero.nombre} ({parqueadero.capacidadDisponible}/{parqueadero.capacidadTotal} disponibles)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {!formEntrada.parqueaderoId ? (
+              <div className="text-center py-12 text-gray-500">
+                <MapPin className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                <p>Selecciona un parqueadero para ver los vehículos estacionados</p>
+              </div>
+            ) : loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-3 text-gray-500">Cargando entradas activas...</p>
+              </div>
+            ) : entradasActivas.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {entradasActivas.map((entrada) => (
                   <div
@@ -535,10 +618,10 @@ const RegistroEntradaSalida = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-12">
                 <Car className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No hay vehículos estacionados</h3>
-                <p className="text-gray-500">Todos los espacios están libres actualmente</p>
+                <p className="text-gray-500">No se encontraron entradas activas en este parqueadero</p>
               </div>
             )}
           </div>

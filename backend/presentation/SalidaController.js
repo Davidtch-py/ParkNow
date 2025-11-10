@@ -4,6 +4,7 @@ import { EntradaRepository } from '../persistence/EntradaRepository.js';
 import { ParqueaderoRepository } from '../persistence/ParqueaderoRepository.js';
 import { TarifaRepository } from '../persistence/TarifaRepository.js';
 import { VehiculoRepository } from '../persistence/VehiculoRepository.js';
+import { EspacioRepository } from '../persistence/EspacioRepository.js';
 import { mqttService } from '../infrastructure/mqttService.js';
 
 const salidaRepository = new SalidaRepository();
@@ -11,20 +12,29 @@ const entradaRepository = new EntradaRepository();
 const parqueaderoRepository = new ParqueaderoRepository();
 const tarifaRepository = new TarifaRepository();
 const vehiculoRepository = new VehiculoRepository();
+const espacioRepository = new EspacioRepository();
 
 const salidaUseCase = new SalidaUseCase(
   salidaRepository, 
   entradaRepository, 
   parqueaderoRepository, 
   tarifaRepository,
-  vehiculoRepository
+  vehiculoRepository,
+  espacioRepository
 );
 
 export class SalidaController {
   async registrar(req, res) {
     try {
-      const { entradaId } = req.body;
+      const { entradaId, parqueaderoId, observaciones } = req.body;
       const controladorId = req.user.id;
+
+      console.log('📤 Datos recibidos para registrar salida:', {
+        entradaId,
+        parqueaderoId,
+        observaciones,
+        controladorId
+      });
 
       if (!entradaId) {
         return res.status(400).json({
@@ -35,8 +45,12 @@ export class SalidaController {
 
       const result = await salidaUseCase.registrarSalida({
         entradaId,
+        parqueaderoId,
+        observaciones,
         controladorId
       });
+
+      console.log('📊 Resultado del registro de salida:', result);
 
       if (result.success) {
         // Enviar notificación MQTT
