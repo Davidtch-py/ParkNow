@@ -19,6 +19,8 @@ interface Horario {
   fechaCreacion: string;
 }
 
+type ScheduleType = 'PERSONALIZADO' | 'DIURNO' | 'NOCTURNO' | '24H' | '24H_PARCIAL';
+
 const HorariosAtencion = () => {
   const [horarios, setHorarios] = useState<Horario[]>([]);
   const [parqueaderos, setParqueaderos] = useState<any[]>([]);
@@ -37,14 +39,29 @@ const HorariosAtencion = () => {
       dia,
       horaApertura: dia === 'Festivos' ? '09:00' : '08:00',
       horaCierre: dia === 'Festivos' ? '17:00' : '18:00',
-      activo: dia !== 'Domingo', // Por defecto domingo cerrado
+      activo: dia !== 'Domingo',
       esFestivo: dia === 'Festivos'
     }))
   );
 
+  // Nuevo estado: tipo de horario seleccionado (estándares + personalizado)
+  const [scheduleType, setScheduleType] = useState<ScheduleType>('PERSONALIZADO');
+  // Para opción 24H_PARCIAL: días seleccionados que serán 24h
+  const [selected24hDays, setSelected24hDays] = useState<string[]>([]);
+
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  useEffect(() => {
+    // Cuando cambia el tipo de horario y no es personalizado, construir formData automático
+    if (scheduleType !== 'PERSONALIZADO') {
+      const nuevos = buildFormFromType(scheduleType, selected24hDays);
+      setFormData(nuevos);
+    }
+    // si es PERSONALIZADO, no cambiar formData automáticamente
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduleType, selected24hDays]);
 
   const cargarDatos = async () => {
     try {
@@ -141,10 +158,10 @@ const HorariosAtencion = () => {
       return;
     }
 
-    // Validar horarios
+    // Validar horarios: permitir horarios nocturnos (apertura > cierre), sólo rechazar igualdad
     for (const item of diasActivos) {
-      if (item.horaApertura >= item.horaCierre) {
-        toast.error(`El horario del ${item.dia} es inválido: la hora de cierre debe ser posterior a la apertura`);
+      if (item.horaApertura === item.horaCierre) {
+        toast.error(`El horario del ${item.dia} es inválido: apertura y cierre no pueden ser iguales`);
         return;
       }
     }
@@ -218,6 +235,8 @@ const HorariosAtencion = () => {
     setShowModal(false);
     setIsEdit(false);
     setSelectedHorario(null);
+    setScheduleType('PERSONALIZADO');
+    setSelected24hDays([]);
   };
 
   const handleEdit = (horario: Horario) => {
@@ -226,33 +245,58 @@ const HorariosAtencion = () => {
     setFormData(horario.horarios);
     setIsEdit(true);
     setShowModal(true);
+    setScheduleType('PERSONALIZADO'); // al editar volvemos a personalizado para evitar sobrescrituras automáticas
   };
 
+  // ...existing code...
   const handleDelete = async (horario: Horario) => {
-    if (window.confirm(`¿Estás seguro de eliminar todos los horarios de ${horario.nombreParqueadero}?`)) {
-      try {
-        // Eliminar todos los horarios del parqueadero
-        // Nota: Esto requeriría un endpoint específico en el backend
-        // Por ahora, eliminar uno por uno si tenemos los IDs
-        toast.info('Eliminando horarios...');
-        
-        // Recargar datos después de eliminar
-        await cargarDatos();
-        toast.success('Horarios eliminados exitosamente');
-      } catch (error) {
-        console.error('Error al eliminar horarios:', error);
-        toast.error('Error al eliminar los horarios');
+    if (!window.confirm(`¿Estás seguro de eliminar todos los horarios de ${horario.nombreParqueadero}?`)) {
+      return;
+    }
+    try {
+      toast.info('Eliminando horarios...');
+      // Obtener horarios existentes del backend
+      const resp = await horarioService.getByParqueadero(horario.parqueaderoId);
+      if (resp.success && resp.horarios && resp.horarios.length > 0) {
+        for (const h of resp.horarios) {
+          // Asegúrate que `h.id` existe; si tu backend usa otro campo ajusta aquí.
+          await horarioService.delete(h.id);
+        }
+      } else {
+        // Si el servicio soporta eliminar por parqueadero directamente, usarlo:
+        // await horarioService.deleteByParqueadero?.(horario.parqueaderoId);
       }
+
+      // Actualización optimista de la UI (remover el parqueadero de la lista)
+      setHorarios(prev => prev.filter(p => p.parqueaderoId !== horario.parqueaderoId));
+
+      // Asegurar sincronización final con el backend
+      await cargarDatos();
+
+      toast.success('Horarios eliminados exitosamente');
+    } catch (error) {
+      console.error('Error al eliminar horarios:', error);
+      toast.error('Error al eliminar los horarios');
     }
   };
+// ...existing code...
 
   const updateHorarioItem = (index: number, field: keyof HorarioItem, value: any) => {
     const nuevosHorarios = [...formData];
     nuevosHorarios[index] = { ...nuevosHorarios[index], [field]: value };
     setFormData(nuevosHorarios);
+    // Si el usuario edita manualmente, forzamos tipo personalizado
+    if (scheduleType !== 'PERSONALIZADO') {
+      setScheduleType('PERSONALIZADO');
+    }
   };
 
   const aplicarATodos = () => {
+    // Solo aplicar cuando estamos en personalizado
+    if (scheduleType !== 'PERSONALIZADO') {
+      toast.info('Para aplicar valores por día debes estar en "Personalizado"');
+      return;
+    }
     const horarioBase = formData[0]; // Usar lunes como base
     const nuevosHorarios = formData.map(item => ({
       ...item,
@@ -265,14 +309,73 @@ const HorariosAtencion = () => {
   };
 
   const setHorario24h = () => {
-    const nuevosHorarios = formData.map(item => ({
-      ...item,
-      horaApertura: '00:00',
-      horaCierre: '23:59',
-      activo: true
-    }));
-    setFormData(nuevosHorarios);
-    toast.info('Configurado para 24 horas');
+    // Si está en personalizado, aplicar 24h a todos los días
+    if (scheduleType === 'PERSONALIZADO') {
+      const nuevosHorarios = formData.map(item => ({
+        ...item,
+        horaApertura: '00:00',
+        horaCierre: '23:59',
+        activo: true
+      }));
+      setFormData(nuevosHorarios);
+      toast.info('Configurado para 24 horas (personalizado)');
+      return;
+    }
+    // Si no, cambiar el tipo a 24H
+    setScheduleType('24H');
+    toast.info('Tipo de horario cambiado a 24 horas (estándar)');
+  };
+
+  // Construye un formData a partir del tipo seleccionado
+  const buildFormFromType = (type: ScheduleType, dias24h: string[]): HorarioItem[] => {
+    const esFestivo = (dia: string) => dia === 'Festivos';
+    switch (type) {
+      case 'DIURNO':
+        return diasSemana.map(dia => ({
+          dia,
+          horaApertura: esFestivo(dia) ? '09:00' : '08:00',
+          horaCierre: esFestivo(dia) ? '17:00' : '18:00',
+          activo: dia !== 'Domingo',
+          esFestivo: esFestivo(dia)
+        }));
+      case 'NOCTURNO':
+        // Horario nocturno: apertura 18:00, cierre 06:00 (permite cruce de día)
+        return diasSemana.map(dia => ({
+          dia,
+          horaApertura: '18:00',
+          horaCierre: '06:00',
+          activo: dia !== 'Domingo',
+          esFestivo: esFestivo(dia)
+        }));
+      case '24H':
+        return diasSemana.map(dia => ({
+          dia,
+          horaApertura: '00:00',
+          horaCierre: '23:59',
+          activo: true,
+          esFestivo: esFestivo(dia)
+        }));
+      case '24H_PARCIAL':
+        return diasSemana.map(dia => {
+          const is24 = dias24h.includes(dia);
+          return {
+            dia,
+            horaApertura: is24 ? '00:00' : (esFestivo(dia) ? '09:00' : '08:00'),
+            horaCierre: is24 ? '23:59' : (esFestivo(dia) ? '17:00' : '18:00'),
+            activo: is24 ? true : dia !== 'Domingo',
+            esFestivo: esFestivo(dia)
+          };
+        });
+      case 'PERSONALIZADO':
+      default:
+        return formData;
+    }
+  };
+
+  const toggle24hDay = (dia: string) => {
+    const exists = selected24hDays.includes(dia);
+    const nuevos = exists ? selected24hDays.filter(d => d !== dia) : [...selected24hDays, dia];
+    setSelected24hDays(nuevos);
   };
 
   const getStatusBadge = (horarios: HorarioItem[]) => {
@@ -295,7 +398,10 @@ const HorariosAtencion = () => {
           <p className="text-gray-600">Configura los horarios de operación de cada parqueadero</p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            resetForm();
+            setShowModal(true);
+          }}
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <Plus className="size-4 mr-2" />
@@ -408,6 +514,53 @@ const HorariosAtencion = () => {
                 </select>
               </div>
 
+              {/* Selección de tipo de horario (estándares vs personalizado) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de horario</label>
+                <div className="flex flex-col gap-2">
+                  <label className="inline-flex items-center">
+                    <input type="radio" name="tipo" checked={scheduleType === 'DIURNO'} onChange={() => setScheduleType('DIURNO')} className="mr-2" />
+                    Horario Diurno (08:00 - 18:00, domingos cerrados)
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input type="radio" name="tipo" checked={scheduleType === 'NOCTURNO'} onChange={() => setScheduleType('NOCTURNO')} className="mr-2" />
+                    Horario Nocturno (18:00 - 06:00)
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input type="radio" name="tipo" checked={scheduleType === '24H'} onChange={() => setScheduleType('24H')} className="mr-2" />
+                    24 Horas (todos los días)
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input type="radio" name="tipo" checked={scheduleType === '24H_PARCIAL'} onChange={() => setScheduleType('24H_PARCIAL')} className="mr-2" />
+                    24 Horas en días específicos
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input type="radio" name="tipo" checked={scheduleType === 'PERSONALIZADO'} onChange={() => setScheduleType('PERSONALIZADO')} className="mr-2" />
+                    Personalizado (configurar por día)
+                  </label>
+                </div>
+              </div>
+
+              {/* Si se elige 24H_PARCIAL, mostrar selector de días para 24h */}
+              {scheduleType === '24H_PARCIAL' && (
+                <div className="bg-gray-50 p-3 rounded">
+                  <div className="text-sm font-medium text-gray-700 mb-2">Selecciona los días que serán 24 horas</div>
+                  <div className="flex flex-wrap gap-2">
+                    {diasSemana.filter(d => d !== 'Festivos').map(dia => (
+                      <label key={dia} className="inline-flex items-center px-3 py-1 border rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selected24hDays.includes(dia)}
+                          onChange={() => toggle24hDay(dia)}
+                          className="mr-2"
+                        />
+                        {dia}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Acciones rápidas */}
               <div className="flex flex-wrap gap-3 items-center">
                 <button
@@ -431,70 +584,64 @@ const HorariosAtencion = () => {
                   <Calendar className="size-4 mr-2" />
                  configurar 24 horas
                 </button>
-
-                {/* Variante menos llamativa (opcional) */}
-                {/* <button
-                  type="button"
-                  onClick={aplicarATodos}
-                  className="inline-flex items-center px-3 py-1 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100"
-                >
-                  Aplicar horario de lunes a todos
-                </button> */}
               </div>
 
-              {/* Configuración por día */}
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <h4 className="font-medium text-gray-900">Configuración por día</h4>
-                  <div className="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full">
-                    💡 Los festivos se aplican automáticamente según el calendario oficial
+              {/* Configuración por día (solo editable si PERSONALIZADO) */}
+              {scheduleType === 'PERSONALIZADO' && (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <h4 className="font-medium text-gray-900">Configuración por día</h4>
+                    <div className="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full">
+                      💡 Los festivos se aplican automáticamente según el calendario oficial
+                    </div>
                   </div>
-                </div>
-                
-                {formData.map((item, index) => (
-                  <div 
-                    key={item.dia} 
-                    className="grid grid-cols-12 gap-4 items-center p-3 rounded-md bg-gray-50"
-                  >
-                    <div className="col-span-3">
-                      <label className="flex items-center">
+                  
+                  {formData.map((item, index) => (
+                    <div 
+                      key={item.dia} 
+                      className="grid grid-cols-12 gap-4 items-center p-3 rounded-md bg-gray-50"
+                    >
+                      <div className="col-span-3">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={item.activo}
+                            onChange={(e) => updateHorarioItem(index, 'activo', e.target.checked)}
+                            className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            disabled={scheduleType !== 'PERSONALIZADO'}
+                          />
+                          <span className="font-medium text-gray-700">
+                            {item.dia}
+                            {item.esFestivo}
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="col-span-4">
                         <input
-                          type="checkbox"
-                          checked={item.activo}
-                          onChange={(e) => updateHorarioItem(index, 'activo', e.target.checked)}
-                          className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          type="time"
+                          value={item.horaApertura}
+                          onChange={(e) => updateHorarioItem(index, 'horaApertura', e.target.value)}
+                          disabled={scheduleType !== 'PERSONALIZADO' || !item.activo}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
                         />
-                        <span className="font-medium text-gray-700">
-                          {item.dia}
-                          {item.esFestivo }
-                        </span>
-                      </label>
-                    </div>
+                      </div>
 
-                    <div className="col-span-4">
-                      <input
-                        type="time"
-                        value={item.horaApertura}
-                        onChange={(e) => updateHorarioItem(index, 'horaApertura', e.target.value)}
-                        disabled={!item.activo}
-                        className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
-                      />
-                    </div>
+                      <div className="col-span-1 text-center text-gray-500">-</div>
 
-                    <div className="col-span-1 text-center text-gray-500">-</div>
-
-                    <div className="col-span-4">
-                      <input
-                        type="time"
-                        value={item.horaCierre}
-                        onChange={(e) => updateHorarioItem(index, 'horaCierre', e.target.value)}
-                        disabled={!item.activo}
-                        className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
-                      />
+                      <div className="col-span-4">
+                        <input
+                          type="time"
+                          value={item.horaCierre}
+                          onChange={(e) => updateHorarioItem(index, 'horaCierre', e.target.value)}
+                          disabled={scheduleType !== 'PERSONALIZADO' || !item.activo}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                 <button
