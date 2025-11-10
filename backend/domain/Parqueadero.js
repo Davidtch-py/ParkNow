@@ -1,15 +1,12 @@
 export class Parqueadero {
-  constructor(id, nombre, direccion, capacidadTotal, capacidadDisponible, ciudad, latitud, longitud, createdAt, updatedAt) {
+  constructor(id, nombre, direccion, capacidadTotal, capacidadDisponible, latitud, longitud, createdAt, updatedAt) {
     this.id = id;
     this.nombre = nombre;
     this.direccion = direccion;
     this.capacidadTotal = capacidadTotal;
     this.capacidadDisponible = capacidadDisponible;
-    this.ciudad = ciudad
-    //this.latitud = latitud;
-    //this.longitud = longitud;
-    this.latitud = latitud || null;
-    this.longitud = longitud || null;
+    this.latitud = latitud;
+    this.longitud = longitud;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }

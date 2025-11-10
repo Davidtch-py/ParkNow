@@ -1,4 +1,4 @@
-import { Parqueadero, sequelize } from './models.js';
+import { Parqueadero } from './models.js';
 
 export class ParqueaderoRepository {
   async create(parqueaderoData) {
@@ -10,15 +10,7 @@ export class ParqueaderoRepository {
   }
 
   async findAll() {
-    try {
-      console.log('🔍 Intentando obtener todos los parqueaderos...');
-      const result = await Parqueadero.findAll();
-      console.log('✅ Parqueaderos obtenidos:', result.length);
-      return result;
-    } catch (error) {
-      console.error('❌ Error en findAll:', error.message);
-      throw error;
-    }
+    return await Parqueadero.findAll();
   }
 
   async update(id, updateData) {

@@ -4,7 +4,6 @@ import { EntradaRepository } from '../persistence/EntradaRepository.js';
 import { ParqueaderoRepository } from '../persistence/ParqueaderoRepository.js';
 import { TarifaRepository } from '../persistence/TarifaRepository.js';
 import { VehiculoRepository } from '../persistence/VehiculoRepository.js';
-import { mqttService } from '../infrastructure/mqttService.js';
 
 const salidaRepository = new SalidaRepository();
 const entradaRepository = new EntradaRepository();
@@ -39,13 +38,6 @@ export class SalidaController {
       });
 
       if (result.success) {
-        // Enviar notificación MQTT
-        try {
-          mqttService.notificarSalida(result.salida);
-        } catch (mqttError) {
-          console.error('[ERROR] Error al enviar notificación MQTT:', mqttError);
-        }
-        
         res.status(201).json(result);
       } else {
         res.status(400).json(result);
