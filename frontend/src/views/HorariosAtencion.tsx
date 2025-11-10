@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Save, Edit, Trash2, Plus, Calendar, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { horarioService, parqueaderoService } from '../services/index';
@@ -27,7 +27,7 @@ const HorariosAtencion = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [selectedHorario, setSelectedHorario] = useState<Horario | null>(null);
+  const [, setSelectedHorario] = useState<Horario | null>(null);
   const [selectedParqueadero, setSelectedParqueadero] = useState('');
 
   const diasSemana = [
@@ -49,21 +49,7 @@ const HorariosAtencion = () => {
   // Para opción 24H_PARCIAL: días seleccionados que serán 24h
   const [selected24hDays, setSelected24hDays] = useState<string[]>([]);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  useEffect(() => {
-    // Cuando cambia el tipo de horario y no es personalizado, construir formData automático
-    if (scheduleType !== 'PERSONALIZADO') {
-      const nuevos = buildFormFromType(scheduleType, selected24hDays);
-      setFormData(nuevos);
-    }
-    // si es PERSONALIZADO, no cambiar formData automáticamente
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scheduleType, selected24hDays]);
-
-  const cargarDatos = async () => {
+  const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -91,7 +77,21 @@ const HorariosAtencion = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
+
+  useEffect(() => {
+    // Cuando cambia el tipo de horario y no es personalizado, construir formData automático
+    if (scheduleType !== 'PERSONALIZADO') {
+      const nuevos = buildFormFromType(scheduleType, selected24hDays);
+      setFormData(nuevos);
+    }
+    // si es PERSONALIZADO, no cambiar formData automáticamente
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduleType, selected24hDays]);
 
   const transformarHorarios = (horariosBackend: any[]): Horario[] => {
     // Agrupar horarios por parqueadero

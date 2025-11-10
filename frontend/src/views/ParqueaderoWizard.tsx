@@ -342,6 +342,7 @@ const ParqueaderoWizard = () => {
                                                         height="100%"
                                                         frameBorder="0"
                                                         style={{ border: 0 }}
+                                                        title={`Ubicación del parqueadero ${formData.nombre}`}
                                                         src={`https://www.google.com/maps?q=${formData.latitud},${formData.longitud}&hl=es&z=16&output=embed`}
                                                         allowFullScreen
                                                     />
