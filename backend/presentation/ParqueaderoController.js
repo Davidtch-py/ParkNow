@@ -1,6 +1,7 @@
 import { ParqueaderoUseCase } from '../application/ParqueaderoUseCase.js';
 import { ParqueaderoRepository } from '../persistence/ParqueaderoRepository.js';
 import { HorarioRepository } from '../persistence/HorarioRepository.js';
+import { mqttService } from '../infrastructure/mqttService.js';
 
 const parqueaderoRepository = new ParqueaderoRepository();
 const horarioRepository = new HorarioRepository();
@@ -9,7 +10,7 @@ const parqueaderoUseCase = new ParqueaderoUseCase(parqueaderoRepository, horario
 export class ParqueaderoController {
   async crear(req, res) {
     try {
-      const { nombre, direccion, capacidadTotal, latitud, longitud } = req.body;
+      const { nombre, direccion, capacidadTotal, ciudad, latitud, longitud } = req.body;
 
       if (!nombre || !direccion || !capacidadTotal) {
         return res.status(400).json({
@@ -18,16 +19,52 @@ export class ParqueaderoController {
         });
       }
 
+      // Validar coordenadas GPS si se proporcionaron
+      if (latitud !== undefined || longitud !== undefined) {
+        // Si se proporciona una, ambas deben estar presentes
+        if (latitud === undefined || longitud === undefined) {
+          return res.status(400).json({
+            success: false,
+            error: 'Debes proporcionar tanto latitud como longitud, o no proporcionar ninguna'
+          });
+        }
+
+        // Validar rango de latitud (-90 a 90)
+        if (latitud < -90 || latitud > 90) {
+          return res.status(400).json({
+            success: false,
+            error: 'La latitud debe estar entre -90 y 90 grados'
+          });
+        }
+
+        // Validar rango de longitud (-180 a 180)
+        if (longitud < -180 || longitud > 180) {
+          return res.status(400).json({
+            success: false,
+            error: 'La longitud debe estar entre -180 y 180 grados'
+          });
+        }
+
+        // Validar que no sean exactamente 0,0 (Null Island)
+        if (latitud === 0 && longitud === 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'Las coordenadas 0,0 no son válidas'
+          });
+        }
+      }
+
       const result = await parqueaderoUseCase.crearParqueadero({
         nombre,
         direccion,
         capacidadTotal,
+        ciudad,
         latitud,
         longitud
       });
 
       if (result.success) {
-        res.status(201).json(result);
+          res.status(201).json(result);
       } else {
         res.status(400).json(result);
       }
@@ -117,6 +154,18 @@ export class ParqueaderoController {
     try {
       const { umbral } = req.query;
       const result = await parqueaderoUseCase.verificarCapacidadBaja(umbral ? parseInt(umbral) : 10);
+      
+      // Enviar notificaciones MQTT para cada parqueadero con capacidad baja
+      if (result.success && result.parqueaderos && result.parqueaderos.length > 0) {
+        try {
+          result.parqueaderos.forEach(parqueadero => {
+            mqttService.notificarCapacidadBaja(parqueadero);
+          });
+        } catch (mqttError) {
+          console.error('[ERROR] Error al enviar notificaciones MQTT:', mqttError);
+        }
+      }
+      
       res.json(result);
     } catch (error) {
       res.status(500).json({

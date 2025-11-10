@@ -30,7 +30,8 @@ const Usuario = sequelize.define('Usuario', {
   }
 }, {
   tableName: 'usuarios',
-  timestamps: true
+  timestamps: true,
+  underscored: true
 });
 
 const Parqueadero = sequelize.define('Parqueadero', {
@@ -50,6 +51,7 @@ const Parqueadero = sequelize.define('Parqueadero', {
   capacidadTotal: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    field: 'capacidad_total',
     validate: {
       min: 1
     }
@@ -57,6 +59,7 @@ const Parqueadero = sequelize.define('Parqueadero', {
   capacidadDisponible: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    field: 'capacidad_disponible',
     validate: {
       min: 0
     }
@@ -71,7 +74,8 @@ const Parqueadero = sequelize.define('Parqueadero', {
   }
 }, {
   tableName: 'parqueaderos',
-  timestamps: true
+  timestamps: true,
+  underscored: true
 });
 
 const Vehiculo = sequelize.define('Vehiculo', {
@@ -86,8 +90,11 @@ const Vehiculo = sequelize.define('Vehiculo', {
     unique: true
   },
   tipo: {
-    type: DataTypes.ENUM('carro', 'moto', 'bicicleta'),
-    allowNull: false
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    validate: {
+      isIn: [['carro', 'moto', 'bicicleta']]
+    }
   },
   color: {
     type: DataTypes.STRING(30),
@@ -111,7 +118,8 @@ const Vehiculo = sequelize.define('Vehiculo', {
   }
 }, {
   tableName: 'vehiculos',
-  timestamps: true
+  timestamps: true,
+  underscored: true
 });
 
 const Tarifa = sequelize.define('Tarifa', {
@@ -129,8 +137,11 @@ const Tarifa = sequelize.define('Tarifa', {
     }
   },
   tipoVehiculo: {
-    type: DataTypes.ENUM('carro', 'moto', 'bicicleta'),
-    allowNull: false
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    validate: {
+      isIn: [['carro', 'moto', 'bicicleta']]
+    }
   },
   tarifaHora: {
     type: DataTypes.DECIMAL(10, 2),
@@ -154,7 +165,8 @@ const Tarifa = sequelize.define('Tarifa', {
   }
 }, {
   tableName: 'tarifas',
-  timestamps: true
+  timestamps: true,
+  underscored: true
 });
 
 const Horario = sequelize.define('Horario', {
@@ -172,11 +184,10 @@ const Horario = sequelize.define('Horario', {
     }
   },
   diaSemana: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(20),
     allowNull: false,
     validate: {
-      min: 0,
-      max: 6
+      isIn: [['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO', 'FESTIVO']]
     }
   },
   horaApertura: {
@@ -191,10 +202,16 @@ const Horario = sequelize.define('Horario', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true
+  },
+  esFestivo: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 }, {
   tableName: 'horarios',
-  timestamps: true
+  timestamps: true,
+  underscored: true
 });
 
 const Entrada = sequelize.define('Entrada', {
@@ -238,7 +255,8 @@ const Entrada = sequelize.define('Entrada', {
   }
 }, {
   tableName: 'entradas',
-  timestamps: true
+  timestamps: true,
+  underscored: true
 });
 
 const Salida = sequelize.define('Salida', {
@@ -279,7 +297,8 @@ const Salida = sequelize.define('Salida', {
   }
 }, {
   tableName: 'salidas',
-  timestamps: true
+  timestamps: true,
+  underscored: true
 });
 
 // Definir asociaciones
@@ -304,6 +323,60 @@ Salida.belongsTo(Usuario, { foreignKey: 'controladorId', as: 'controlador' });
 Entrada.hasOne(Salida, { foreignKey: 'entradaId' });
 Salida.belongsTo(Entrada, { foreignKey: 'entradaId' });
 
+// Definición del modelo Espacio
+const Espacio = sequelize.define('Espacio', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  parqueaderoId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: Parqueadero,
+      key: 'id'
+    }
+  },
+  numero: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  tipoVehiculo: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    validate: {
+      isIn: [['carro', 'moto', 'bicicleta']]
+    }
+  },
+  estado: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'DISPONIBLE',
+    validate: {
+      isIn: [['DISPONIBLE', 'OCUPADO', 'MANTENIMIENTO']]
+    }
+  },
+  vehiculoId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: Vehiculo,
+      key: 'id'
+    }
+  }
+}, {
+  tableName: 'espacios',
+  timestamps: true,
+  underscored: true
+});
+
+// Agregar asociaciones para Espacio
+Parqueadero.hasMany(Espacio, { foreignKey: 'parqueaderoId', as: 'espacios' });
+Espacio.belongsTo(Parqueadero, { foreignKey: 'parqueaderoId', as: 'parqueadero' });
+Vehiculo.hasMany(Espacio, { foreignKey: 'vehiculoId', as: 'espaciosOcupados' });
+Espacio.belongsTo(Vehiculo, { foreignKey: 'vehiculoId', as: 'vehiculo' });
+
 export {
   sequelize,
   Usuario,
@@ -312,5 +385,6 @@ export {
   Tarifa,
   Horario,
   Entrada,
-  Salida
+  Salida,
+  Espacio
 };
