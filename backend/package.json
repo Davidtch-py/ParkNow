@@ -20,10 +20,7 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "sequelize": "^6.32.1",
-    "pg": "^8.11.3",
-    "mqtt": "^5.3.0",
-    "aedes": "^0.50.0",
-    "ws": "^8.16.0"
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",

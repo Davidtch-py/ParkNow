@@ -2,7 +2,6 @@ import { EntradaUseCase } from '../application/EntradaUseCase.js';
 import { EntradaRepository } from '../persistence/EntradaRepository.js';
 import { VehiculoRepository } from '../persistence/VehiculoRepository.js';
 import { ParqueaderoRepository } from '../persistence/ParqueaderoRepository.js';
-import { mqttService } from '../infrastructure/mqttService.js';
 
 const entradaRepository = new EntradaRepository();
 const vehiculoRepository = new VehiculoRepository();
@@ -30,29 +29,6 @@ export class EntradaController {
       });
 
       if (result.success) {
-        // Enviar notificación MQTT de entrada
-        try {
-          mqttService.notificarEntrada(result.entrada);
-        } catch (mqttError) {
-          console.error('[ERROR] Error al enviar notificación MQTT:', mqttError);
-        }
-
-        // Verificar capacidad del parqueadero después de la entrada
-        try {
-          const parqueadero = await parqueaderoRepository.findById(parqueaderoId);
-          if (parqueadero) {
-            const porcentajeDisponible = Math.round((parqueadero.capacidad_disponible / parqueadero.capacidad_total) * 100);
-            
-            // Si la capacidad disponible es menor al 25% (75% ocupado), enviar alerta
-            if (porcentajeDisponible < 25) {
-              console.log(`⚠️ Capacidad baja detectada en ${parqueadero.nombre}: ${porcentajeDisponible}% disponible`);
-              mqttService.notificarCapacidadBaja(parqueadero);
-            }
-          }
-        } catch (capacidadError) {
-          console.error('[ERROR] Error al verificar capacidad:', capacidadError);
-        }
-        
         res.status(201).json(result);
       } else {
         res.status(400).json(result);
