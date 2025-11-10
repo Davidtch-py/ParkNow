@@ -55,10 +55,6 @@ const RegistroEntradaSalida = () => {
   const [selectedEntrada, setSelectedEntrada] = useState<EntradaActiva | null>(null);
   const [observacionesSalida, setObservacionesSalida] = useState('');
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
   const cargarEntradasActivas = useCallback(async () => {
     try {
       setLoading(true);
@@ -140,7 +136,7 @@ const RegistroEntradaSalida = () => {
     }
   }, [searchVehicle, vehiculos]);
 
-  const cargarDatos = async () => {
+  const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -171,7 +167,7 @@ const RegistroEntradaSalida = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formEntrada.parqueaderoId, cargarEntradasActivas]);
 
   const handleRegistrarEntrada = async (e: React.FormEvent) => {
     e.preventDefault();
