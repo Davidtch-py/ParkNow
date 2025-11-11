@@ -244,33 +244,99 @@ export const reporteService = {
 
 export const tarifaService = {
   async getAll() {
-    const response = await api.get('/tarifas');
-    return response.data;
+    try {
+      const response = await api.get('/tarifas');
+      return response.data;
+    } catch (error: any) {
+      console.error('[tarifaService.getAll] Error:', error);
+      if (error.response) {
+        return { success: false, error: error.response.data || `HTTP ${error.response.status}` };
+      }
+      if (error.request) {
+        return { success: false, error: 'No se pudo conectar al servidor de tarifas' };
+      }
+      return { success: false, error: error.message };
+    }
   },
 
   async getById(id: string | number) {
-    const response = await api.get(`/tarifas/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/tarifas/${id}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('[tarifaService.getById] Error:', error);
+      if (error.response) {
+        return { success: false, error: error.response.data || `HTTP ${error.response.status}` };
+      }
+      if (error.request) {
+        return { success: false, error: 'No se pudo conectar al servidor de tarifas' };
+      }
+      return { success: false, error: error.message };
+    }
   },
 
   async create(tarifaData: any) {
-    const response = await api.post('/tarifas', tarifaData);
-    return response.data;
+    try {
+      const response = await api.post('/tarifas', tarifaData);
+      return response.data;
+    } catch (error: any) {
+      console.error('[tarifaService.create] Error creando tarifa:', error);
+      if (error.response) {
+        return { success: false, error: error.response.data || `HTTP ${error.response.status}` };
+      }
+      if (error.request) {
+        return { success: false, error: 'No se pudo conectar al servidor al crear la tarifa' };
+      }
+      return { success: false, error: error.message };
+    }
   },
 
   async update(id: string | number, tarifaData: any) {
-    const response = await api.put(`/tarifas/${id}`, tarifaData);
-    return response.data;
+    try {
+      const response = await api.put(`/tarifas/${id}`, tarifaData);
+      return response.data;
+    } catch (error: any) {
+      console.error('[tarifaService.update] Error actualizando tarifa:', error);
+      if (error.response) {
+        return { success: false, error: error.response.data || `HTTP ${error.response.status}` };
+      }
+      if (error.request) {
+        return { success: false, error: 'No se pudo conectar al servidor al actualizar la tarifa' };
+      }
+      return { success: false, error: error.message };
+    }
   },
 
   async delete(id: string | number) {
-    const response = await api.delete(`/tarifas/${id}`);
-    return response.data;
+    try {
+      const response = await api.delete(`/tarifas/${id}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('[tarifaService.delete] Error eliminando tarifa:', error);
+      if (error.response) {
+        return { success: false, error: error.response.data || `HTTP ${error.response.status}` };
+      }
+      if (error.request) {
+        return { success: false, error: 'No se pudo conectar al servidor al eliminar la tarifa' };
+      }
+      return { success: false, error: error.message };
+    }
   },
 
   async toggleEstado(id: string | number, activa: boolean) {
-    const response = await api.put(`/tarifas/${id}`, { activa });
-    return response.data;
+    try {
+      const response = await api.put(`/tarifas/${id}`, { activa });
+      return response.data;
+    } catch (error: any) {
+      console.error('[tarifaService.toggleEstado] Error cambiando estado de tarifa:', error);
+      if (error.response) {
+        return { success: false, error: error.response.data || `HTTP ${error.response.status}` };
+      }
+      if (error.request) {
+        return { success: false, error: 'No se pudo conectar al servidor al cambiar estado de la tarifa' };
+      }
+      return { success: false, error: error.message };
+    }
   },
 
   async calcularCosto(parqueaderoId: string | number, tipoVehiculo: string, fechaIngreso: Date, fechaSalida?: Date) {

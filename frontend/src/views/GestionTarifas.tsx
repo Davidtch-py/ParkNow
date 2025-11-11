@@ -51,8 +51,9 @@ const GestionTarifas = () => {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [tarifaEditando, setTarifaEditando] = useState<Tarifa | null>(null);
   const [busqueda, setBusqueda] = useState('');
-  const [filtroTipo, setFiltroTipo] = useState('');
-  const [filtroParqueadero, setFiltroParqueadero] = useState('');
+  // Use explicit 'todos' token so the filtering logic can check against it
+  const [filtroTipo, setFiltroTipo] = useState('todos');
+  const [filtroParqueadero, setFiltroParqueadero] = useState('todos');
 
   // const { user } = useAuth();
 
@@ -105,7 +106,10 @@ const GestionTarifas = () => {
         setParqueaderos(parqueaderosResult.parqueaderos);
       }
 
-      // Simular carga de tarifas
+      // Intentar cargar tarifas reales desde la API
+      const tarifasResult = await tarifaService.getAll();
+
+      // Simular carga de tarifas en caso de que la API no responda / esté en desarrollo
       const tarifasMock: Tarifa[] = [
         {
           id: 1,
@@ -172,19 +176,47 @@ const GestionTarifas = () => {
         }
       ];
 
-      setTarifas(tarifasMock);
+      if (tarifasResult && tarifasResult.success && Array.isArray(tarifasResult.tarifas)) {
+        // Usar datos reales desde la API
+        setTarifas(tarifasResult.tarifas.map((t: any) => ({
+          // Mapear campos para que encajen con la interfaz Tarifa usada en la UI
+          id: t.id,
+          parqueaderoId: t.parqueaderoId,
+          parqueaderoNombre: t.parqueaderoNombre || t.Parqueadero?.nombre || '',
+          tipoVehiculo: t.tipoVehiculo,
+          tipoTarifa: t.tipoTarifa || (t.tarifaHora ? 'por_hora' : (t.tarifaDia ? 'tarifa_plana' : 'fraccionada')),
+          valor: t.valor ?? (t.tarifaHora || t.tarifaDia || t.tarifaMes || 0),
+          tiempoMinimo: t.tiempoMinimo,
+          descripcion: t.descripcion,
+          activa: t.activa ?? true,
+          fechaCreacion: t.createdAt || t.vigenciaDesde || new Date().toISOString(),
+          fechaActualizacion: t.updatedAt || t.vigenciaHasta || new Date().toISOString()
+        })));
+      } else {
+        // Fallback a datos mock cuando la API no esté disponible
+        setTarifas(tarifasMock);
+      }
 
       // Calcular estadísticas
+      // Calcular estadísticas con las tarifas cargadas actualmente
+      const sourceTarifas = tarifasResult && tarifasResult.success && Array.isArray(tarifasResult.tarifas)
+        ? tarifasResult.tarifas.map((t: any) => ({
+            tipoVehiculo: t.tipoVehiculo,
+            valor: t.valor ?? (t.tarifaHora || t.tarifaDia || t.tarifaMes || 0),
+            activa: t.activa ?? true
+          }))
+        : tarifasMock;
+
+      const carrosActivos = sourceTarifas.filter((t: any) => t.tipoVehiculo === 'carro' && t.activa);
+      const promedioCarros = carrosActivos.length > 0
+        ? Math.round(carrosActivos.reduce((sum: number, t: any) => sum + (t.valor || 0), 0) / carrosActivos.length)
+        : 0;
+
       const stats: EstadisticasTarifas = {
-        totalTarifas: tarifasMock.length,
-        tarifasActivas: tarifasMock.filter(t => t.activa).length,
-        promedioTarifaCarros: Math.round(
-          tarifasMock
-            .filter(t => t.tipoVehiculo === 'carro' && t.activa)
-            .reduce((sum, t) => sum + t.valor, 0) / 
-          tarifasMock.filter(t => t.tipoVehiculo === 'carro' && t.activa).length
-        ),
-        ingresosDiarios: 2450000 // Simulado
+        totalTarifas: (sourceTarifas as any[]).length,
+        tarifasActivas: (sourceTarifas as any[]).filter(t => t.activa).length,
+        promedioTarifaCarros: promedioCarros,
+        ingresosDiarios: 2450000 // Simulado (mantener valor por ahora)
       };
       setEstadisticas(stats);
 
@@ -261,22 +293,57 @@ const GestionTarifas = () => {
       if (tarifaEditando) {
         // Actualizar tarifa existente
         const result = await tarifaService.update(tarifaEditando.id, tarifaData);
-        if (result.success) {
+        if (result && result.success) {
           toast.success('Tarifa actualizada exitosamente');
+          // Actualizar en estado local para reflejar el cambio inmediatamente
+          if (result.tarifa) {
+            setTarifas(prev => prev.map(t => t.id === result.tarifa.id ? ({
+              id: result.tarifa.id,
+              parqueaderoId: result.tarifa.parqueaderoId,
+              parqueaderoNombre: result.tarifa.parqueaderoNombre || result.tarifa.Parqueadero?.nombre || '',
+              tipoVehiculo: result.tarifa.tipoVehiculo,
+              tipoTarifa: result.tarifa.tipoTarifa || (result.tarifa.tarifaHora ? 'por_hora' : (result.tarifa.tarifaDia ? 'tarifa_plana' : 'fraccionada')),
+              valor: result.tarifa.valor ?? (result.tarifa.tarifaHora || result.tarifa.tarifaDia || result.tarifa.tarifaMes || 0),
+              tiempoMinimo: result.tarifa.tiempoMinimo,
+              descripcion: result.tarifa.descripcion,
+              activa: result.tarifa.activa ?? true,
+              fechaCreacion: result.tarifa.createdAt || result.tarifa.vigenciaDesde || new Date().toISOString(),
+              fechaActualizacion: result.tarifa.updatedAt || result.tarifa.vigenciaHasta || new Date().toISOString()
+            }) : t));
+          }
         } else {
-          toast.error('Error al actualizar tarifa');
+          toast.error(result?.error || 'Error al actualizar tarifa');
         }
       } else {
         // Crear nueva tarifa
         const result = await tarifaService.create(tarifaData);
-        if (result.success) {
+        if (result && result.success) {
           toast.success('Tarifa creada exitosamente');
+          // Si la API devolvió la tarifa creada, añadirla al estado local
+          if (result.tarifa) {
+            const t = result.tarifa;
+            const nueva: Tarifa = {
+              id: t.id,
+              parqueaderoId: t.parqueaderoId,
+              parqueaderoNombre: t.parqueaderoNombre || t.Parqueadero?.nombre || '',
+              tipoVehiculo: t.tipoVehiculo,
+              tipoTarifa: t.tipoTarifa || (t.tarifaHora ? 'por_hora' : (t.tarifaDia ? 'tarifa_plana' : 'fraccionada')),
+              valor: t.valor ?? (t.tarifaHora || t.tarifaDia || t.tarifaMes || 0),
+              tiempoMinimo: t.tiempoMinimo,
+              descripcion: t.descripcion,
+              activa: t.activa ?? true,
+              fechaCreacion: t.createdAt || t.vigenciaDesde || new Date().toISOString(),
+              fechaActualizacion: t.updatedAt || t.vigenciaHasta || new Date().toISOString()
+            };
+            setTarifas(prev => [nueva, ...prev]);
+          }
         } else {
-          toast.error('Error al crear tarifa');
+          toast.error(result?.error || 'Error al crear tarifa');
         }
       }
 
       cerrarModal();
+      // Volver a cargar datos desde API por si existen campos adicionales o para sincronizar estado
       cargarDatos();
 
     } catch (error) {
@@ -453,22 +520,22 @@ const GestionTarifas = () => {
               </div>
 
               <select
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-park-blue"
                 value={filtroTipo}
                 onChange={(e) => setFiltroTipo(e.target.value)}
               >
-                <option value="">Todos los tipos</option>
+                <option value="todos">Todos los tipos</option>
                 <option value="carro">Carros</option>
                 <option value="moto">Motos</option>
                 <option value="bicicleta">Bicicletas</option>
               </select>
 
               <select
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-park-blue"
                 value={filtroParqueadero}
                 onChange={(e) => setFiltroParqueadero(e.target.value)}
               >
-                <option value="">Todos los parqueaderos</option>
+                <option value="todos">Todos los parqueaderos</option>
                 {parqueaderos.map((parqueadero) => (
                   <option key={parqueadero.id} value={parqueadero.id}>
                     {parqueadero.nombre}
@@ -479,7 +546,7 @@ const GestionTarifas = () => {
 
             <button
               onClick={abrirModalCrear}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 text-black font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--park-blue)' }}
             >
               <Plus className="h-4 w-4 mr-2" />
               Nueva Tarifa
@@ -600,7 +667,7 @@ const GestionTarifas = () => {
                 </label>
                 <select
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-park-blue"
                   value={formTarifa.parqueaderoId}
                   onChange={(e) => setFormTarifa({...formTarifa, parqueaderoId: e.target.value})}
                 >
@@ -619,7 +686,7 @@ const GestionTarifas = () => {
                 </label>
                 <select
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-park-blue"
                   value={formTarifa.tipoVehiculo}
                   onChange={(e) => setFormTarifa({...formTarifa, tipoVehiculo: e.target.value as 'carro' | 'moto' | 'bicicleta'})}
                 >
@@ -635,7 +702,7 @@ const GestionTarifas = () => {
                 </label>
                 <select
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-park-blue"
                   value={formTarifa.tipoTarifa}
                   onChange={(e) => setFormTarifa({...formTarifa, tipoTarifa: e.target.value as 'por_hora' | 'tarifa_plana' | 'fraccionada'})}
                 >
@@ -654,7 +721,7 @@ const GestionTarifas = () => {
                   required
                   min="0"
                   step="100"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-park-blue"
                   placeholder="Ej: 3000"
                   value={formTarifa.valor}
                   onChange={(e) => setFormTarifa({...formTarifa, valor: e.target.value})}
@@ -669,7 +736,7 @@ const GestionTarifas = () => {
                   <input
                     type="number"
                     min="1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-park-blue"
                     placeholder="Ej: 30"
                     value={formTarifa.tiempoMinimo}
                     onChange={(e) => setFormTarifa({...formTarifa, tiempoMinimo: e.target.value})}
@@ -683,7 +750,7 @@ const GestionTarifas = () => {
                 </label>
                 <textarea
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-park-blue"
                   placeholder="Descripción opcional de la tarifa"
                   value={formTarifa.descripcion}
                   onChange={(e) => setFormTarifa({...formTarifa, descripcion: e.target.value})}
@@ -714,7 +781,7 @@ const GestionTarifas = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="inline-flex items-center px-4 py-2 text-black rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" style={{ backgroundColor: 'var(--park-blue)' }}
                 >
                   {loading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

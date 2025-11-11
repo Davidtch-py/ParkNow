@@ -70,6 +70,14 @@ export class TarifaController {
         });
       }
 
+      const tiposVehiculo = ['carro', 'moto', 'bicicleta'];
+      if (!tiposVehiculo.includes(tipoVehiculo)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'tipoVehiculo inválido. Valores permitidos: carro, moto, bicicleta' 
+        });
+      }
+
       const nuevaTarifa = await tarifaRepository.create({
         parqueaderoId,
         tipoVehiculo,
@@ -80,10 +88,7 @@ export class TarifaController {
         vigenciaHasta: new Date(vigenciaHasta)
       });
 
-      res.status(201).json({
-        success: true,
-        tarifa: nuevaTarifa
-      });
+      return res.status(201).json({ success: true, tarifa: nuevaTarifa });
     } catch (error) {
       console.error('❌ Error creando tarifa:', error.message);
       res.status(500).json({
@@ -144,7 +149,7 @@ export class TarifaController {
 
       res.json({
         success: true,
-        message: 'Tarifa eliminada correctamente'
+        message: 'Tarifa eliminada exitosamente'
       });
     } catch (error) {
       console.error('❌ Error eliminando tarifa:', error.message);
@@ -154,5 +159,22 @@ export class TarifaController {
       });
     }
   }
-}
 
+  async obtenerPorParqueadero(req, res) {
+    try {
+      const { parqueaderoId } = req.params;
+      const tarifas = await tarifaRepository.findByParqueadero(parqueaderoId);
+
+      res.json({
+        success: true,
+        tarifas
+      });
+    } catch (error) {
+      console.error('❌ Error obteniendo tarifas por parqueadero:', error.message);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor'
+      });
+    }
+  }
+}
