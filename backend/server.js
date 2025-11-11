@@ -317,28 +317,22 @@ async function insertSeedData() {
       }
     ]);
 
-    // Insertar algunas entradas activas
-    await Entrada.bulkCreate([
+    // Insertar algunos registros activos (entradas sin salida)
+    await Registro.bulkCreate([
       {
-        vehiculoId: vehiculos[0].id,
-        parqueaderoId: parqueaderos[0].id,
-        controladorId: usuarios[1].id,
-        fechaHoraEntrada: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 horas atrás
-        espacioAsignado: 15
+        id_vehiculo: vehiculos[0].id,
+        id_usuario: usuarios[1].id,
+        fecha_ingreso: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 horas atrás
       },
       {
-        vehiculoId: vehiculos[1].id,
-        parqueaderoId: parqueaderos[0].id,
-        controladorId: usuarios[1].id,
-        fechaHoraEntrada: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hora atrás
-        espacioAsignado: 16
+        id_vehiculo: vehiculos[1].id,
+        id_usuario: usuarios[1].id,
+        fecha_ingreso: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hora atrás
       },
       {
-        vehiculoId: vehiculos[2].id,
-        parqueaderoId: parqueaderos[1].id,
-        controladorId: usuarios[2].id,
-        fechaHoraEntrada: new Date(Date.now() - 30 * 60 * 1000), // 30 minutos atrás
-        espacioAsignado: 5
+        id_vehiculo: vehiculos[2].id,
+        id_usuario: usuarios[2].id,
+        fecha_ingreso: new Date(Date.now() - 30 * 60 * 1000), // 30 minutos atrás
       }
     ]);
 
@@ -377,10 +371,10 @@ async function startServer() {
   try {
     await initializeDatabase();
     
-    // Inicializar broker MQTT
-    const mqttPort = process.env.MQTT_PORT || 1883;
-    const mqttWsPort = process.env.MQTT_WS_PORT || 8883;
-    mqttService.initialize(mqttPort, mqttWsPort);
+    // Inicializar broker MQTT (temporalmente deshabilitado)
+    // const mqttPort = process.env.MQTT_PORT || 1883;
+    // const mqttWsPort = process.env.MQTT_WS_PORT || 8883;
+    // mqttService.initialize(mqttPort, mqttWsPort);
     
     app.listen(PORT, () => {
       console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
