@@ -280,14 +280,17 @@ const GestionTarifas = () => {
     try {
       setLoading(true);
 
+      // Convertir al formato que espera el backend
+      const valor = parseInt(formTarifa.valor);
       const tarifaData = {
         parqueaderoId: parseInt(formTarifa.parqueaderoId),
         tipoVehiculo: formTarifa.tipoVehiculo,
-        tipoTarifa: formTarifa.tipoTarifa,
-        valor: parseInt(formTarifa.valor),
-        tiempoMinimo: formTarifa.tiempoMinimo ? parseInt(formTarifa.tiempoMinimo) : undefined,
-        descripcion: formTarifa.descripcion,
-        activa: formTarifa.activa
+        // Mapear según el tipo de tarifa seleccionado
+        tarifaHora: formTarifa.tipoTarifa === 'por_hora' ? valor : (valor * 0.1), // 10% del valor base
+        tarifaDia: formTarifa.tipoTarifa === 'tarifa_plana' ? valor : (valor * 8), // 8 horas
+        tarifaMes: formTarifa.tipoTarifa === 'fraccionada' ? valor : (valor * 200), // ~25 días
+        vigenciaDesde: new Date().toISOString().split('T')[0], // Fecha actual
+        vigenciaHasta: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 año después
       };
 
       if (tarifaEditando) {
