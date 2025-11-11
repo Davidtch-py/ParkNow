@@ -44,25 +44,63 @@ export class TarifaController {
 
   async crear(req, res) {
     try {
-      const { tipoVehiculo, tarifaPorHora, tarifaFija } = req.body;
+      // Nuevo payload esperado desde frontend:
+      // { parqueaderoId, tipoVehiculo, tipoTarifa, valor, tiempoMinimo, descripcion, activa }
+      const {
+        parqueaderoId,
+        tipoVehiculo,
+        tipoTarifa,
+        valor,
+        tiempoMinimo,
+        descripcion,
+        activa
+      } = req.body;
 
-      if (!tipoVehiculo || (!tarifaPorHora && !tarifaFija)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Tipo de vehículo y al menos una tarifa son requeridos'
-        });
+      // Validaciones básicas
+      if (!parqueaderoId) {
+        return res.status(400).json({ success: false, error: 'parqueaderoId es requerido' });
       }
 
+      const tiposVehiculo = ['carro', 'moto', 'bicicleta'];
+      if (!tipoVehiculo || !tiposVehiculo.includes(tipoVehiculo)) {
+        return res.status(400).json({ success: false, error: 'tipoVehiculo inválido. Valores permitidos: carro, moto, bicicleta' });
+      }
+
+      const tiposTarifa = ['por_hora', 'tarifa_plana', 'fraccionada'];
+      if (!tipoTarifa || !tiposTarifa.includes(tipoTarifa)) {
+        return res.status(400).json({ success: false, error: 'tipoTarifa inválido. Valores permitidos: por_hora, tarifa_plana, fraccionada' });
+      }
+
+      const valorNum = Number(valor);
+      if (isNaN(valorNum) || valorNum < 0) {
+        return res.status(400).json({ success: false, error: 'valor debe ser un número >= 0' });
+      }
+
+      const tiempoMin = tiempoMinimo !== undefined && tiempoMinimo !== null ? Number(tiempoMinimo) : null;
+      if (tiempoMin !== null && (isNaN(tiempoMin) || tiempoMin <= 0)) {
+        return res.status(400).json({ success: false, error: 'tiempoMinimo debe ser un número positivo si se envía' });
+      }
+
+      // Mapear a los campos del modelo Tarifa
+      // modelo espera: parqueaderoId, tipoVehiculo, tarifaHora, tarifaDia, tarifaMes, vigenciaDesde, vigenciaHasta
+      const tarifaHora = tipoTarifa === 'por_hora' ? valorNum : 0;
+      const tarifaDia = tipoTarifa === 'tarifa_plana' ? valorNum : 0;
+      const tarifaMes = tipoTarifa === 'fraccionada' ? valorNum : 0;
+
+      const ahora = new Date();
+      const hasta = new Date('2099-12-31T23:59:59Z');
+
       const nuevaTarifa = await tarifaRepository.create({
+        parqueaderoId,
         tipoVehiculo,
-        tarifaPorHora: tarifaPorHora || 0,
-        tarifaFija: tarifaFija || 0
+        tarifaHora,
+        tarifaDia,
+        tarifaMes,
+        vigenciaDesde: ahora,
+        vigenciaHasta: hasta
       });
 
-      res.status(201).json({
-        success: true,
-        tarifa: nuevaTarifa
-      });
+      return res.status(201).json({ success: true, tarifa: nuevaTarifa });
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -74,7 +112,15 @@ export class TarifaController {
   async actualizar(req, res) {
     try {
       const { id } = req.params;
-      const { tipoVehiculo, tarifaPorHora, tarifaFija } = req.body;
+      const {
+        parqueaderoId,
+        tipoVehiculo,
+        tipoTarifa,
+        valor,
+        tiempoMinimo,
+        descripcion,
+        activa
+      } = req.body;
 
       const tarifa = await tarifaRepository.findById(id);
       if (!tarifa) {
@@ -84,11 +130,26 @@ export class TarifaController {
         });
       }
 
-      const tarifaActualizada = await tarifaRepository.update(id, {
-        tipoVehiculo: tipoVehiculo || tarifa.tipoVehiculo,
-        tarifaPorHora: tarifaPorHora !== undefined ? tarifaPorHora : tarifa.tarifaPorHora,
-        tarifaFija: tarifaFija !== undefined ? tarifaFija : tarifa.tarifaFija
-      });
+      // Construir objeto de actualización sólo con los campos que se envían
+      const updateData = {};
+      // Mapear campos al modelo existente
+      if (parqueaderoId !== undefined) updateData.parqueaderoId = parqueaderoId;
+      if (tipoVehiculo !== undefined) updateData.tipoVehiculo = tipoVehiculo;
+      if (tipoTarifa !== undefined && valor !== undefined) {
+        const v = Number(valor);
+        if (tipoTarifa === 'por_hora') {
+          updateData.tarifaHora = v;
+        } else if (tipoTarifa === 'tarifa_plana') {
+          updateData.tarifaDia = v;
+        } else if (tipoTarifa === 'fraccionada') {
+          updateData.tarifaMes = v;
+        }
+      } else if (valor !== undefined) {
+        // Si cambian sólo el valor y no el tipo, intentar actualizar tarifaHora (por compatibilidad)
+        updateData.tarifaHora = Number(valor);
+      }
+
+      const tarifaActualizada = await tarifaRepository.update(id, updateData);
 
       res.json({
         success: true,
