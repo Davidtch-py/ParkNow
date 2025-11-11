@@ -402,7 +402,7 @@ const HorariosAtencion = () => {
             resetForm();
             setShowModal(true);
           }}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="inline-flex items-center px-4 py-2 text-black rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--park-blue)' }}
         >
           <Plus className="size-4 mr-2" />
           Nuevo Horario
@@ -500,7 +500,7 @@ const HorariosAtencion = () => {
                 </label>
                 <select
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-park-blue"
                   value={selectedParqueadero}
                   onChange={(e) => setSelectedParqueadero(e.target.value)}
                   disabled={isEdit}
@@ -519,23 +519,23 @@ const HorariosAtencion = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de horario</label>
                 <div className="flex flex-col gap-2">
                   <label className="inline-flex items-center">
-                    <input type="radio" name="tipo" checked={scheduleType === 'DIURNO'} onChange={() => setScheduleType('DIURNO')} className="mr-2" />
+                    <input type="radio" name="tipo" checked={scheduleType === 'DIURNO'} onChange={() => setScheduleType('DIURNO')} className="mr-2 w-4 h-4 rounded-full border-2 border-[var(--park-blue)] checked:bg-[var(--park-blue)] checked:border-[var(--park-blue)] focus:ring-2 focus:ring-[var(--park-blue)] appearance-none"/>
                     Horario Diurno (08:00 - 18:00, domingos cerrados)
                   </label>
                   <label className="inline-flex items-center">
-                    <input type="radio" name="tipo" checked={scheduleType === 'NOCTURNO'} onChange={() => setScheduleType('NOCTURNO')} className="mr-2" />
+                    <input type="radio" name="tipo" checked={scheduleType === 'NOCTURNO'} onChange={() => setScheduleType('NOCTURNO')} className="mr-2 w-4 h-4 rounded-full border-2 border-[var(--park-blue)] checked:bg-[var(--park-blue)] checked:border-[var(--park-blue)] focus:ring-2 focus:ring-[var(--park-blue)] appearance-none"/>
                     Horario Nocturno (18:00 - 06:00)
                   </label>
                   <label className="inline-flex items-center">
-                    <input type="radio" name="tipo" checked={scheduleType === '24H'} onChange={() => setScheduleType('24H')} className="mr-2" />
+                    <input type="radio" name="tipo" checked={scheduleType === '24H'} onChange={() => setScheduleType('24H')} className="mr-2 w-4 h-4 rounded-full border-2 border-[var(--park-blue)] checked:bg-[var(--park-blue)] checked:border-[var(--park-blue)] focus:ring-2 focus:ring-[var(--park-blue)] appearance-none"/>
                     24 Horas (todos los días)
                   </label>
                   <label className="inline-flex items-center">
-                    <input type="radio" name="tipo" checked={scheduleType === '24H_PARCIAL'} onChange={() => setScheduleType('24H_PARCIAL')} className="mr-2" />
+                    <input type="radio" name="tipo" checked={scheduleType === '24H_PARCIAL'} onChange={() => setScheduleType('24H_PARCIAL')} className="mr-2 w-4 h-4 rounded-full border-2 border-[var(--park-blue)] checked:bg-[var(--park-blue)] checked:border-[var(--park-blue)] focus:ring-2 focus:ring-[var(--park-blue)] appearance-none"/>
                     24 Horas en días específicos
                   </label>
                   <label className="inline-flex items-center">
-                    <input type="radio" name="tipo" checked={scheduleType === 'PERSONALIZADO'} onChange={() => setScheduleType('PERSONALIZADO')} className="mr-2" />
+                    <input type="radio" name="tipo" checked={scheduleType === 'PERSONALIZADO'} onChange={() => setScheduleType('PERSONALIZADO')} className="mr-2 w-4 h-4 rounded-full border-2 border-[var(--park-blue)] checked:bg-[var(--park-blue)] checked:border-[var(--park-blue)] focus:ring-2 focus:ring-[var(--park-blue)] appearance-none"    />
                     Personalizado (configurar por día)
                   </label>
                 </div>
@@ -568,7 +568,7 @@ const HorariosAtencion = () => {
                   onClick={aplicarATodos}
                   title="Aplicar horario de lunes a todos"
                   aria-label="Aplicar horario a todos los días"
-                  className="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  className="inline-flex items-center px-3 py-2 text-black text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" style={{ backgroundColor: 'var(--park-blue)' }}
                 >
                   <CheckCircle className="size-4 mr-2" />
                   Aplicar a todos horario del lunes
@@ -653,7 +653,7 @@ const HorariosAtencion = () => {
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-4 py-2 text-black rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" style={{ backgroundColor: 'var(--park-blue)' }}
                 >
                   <Save className="size-4 mr-2" />
                   {isEdit ? 'Actualizar' : 'Guardar'} Horario
