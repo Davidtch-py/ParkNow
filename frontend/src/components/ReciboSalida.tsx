@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, Printer, X } from 'lucide-react';
+import { CheckCircle, Printer } from 'lucide-react';
 
 interface ReciboProps {
   recibo: {

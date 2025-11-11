@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertTriangle, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 interface ParqueaderoAlerta {
