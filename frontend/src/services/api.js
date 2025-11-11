@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { obtenerMensajeAmigable } from '../utils/errorMessages';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
@@ -37,6 +38,9 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    const mensajeOriginal = error.response?.data?.error || error.message;
+    const mensajeAmigable = obtenerMensajeAmigable(mensajeOriginal);
+
     console.error('❌ API Error completo:', error);
     console.error('❌ API Error detalles:', {
       method: error.config?.method?.toUpperCase(),
@@ -44,8 +48,12 @@ api.interceptors.response.use(
       status: error.response?.status,
       statusText: error.response?.statusText,
       data: error.response?.data,
-      message: error.message
+      message: error.message,
+      mensajeAmigable
     });
+    
+    // Agregar mensaje amigable al error
+    error.friendlyMessage = mensajeAmigable;
     
     // SOLO redirigir en 401 si NO estamos en la página de login
     if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {

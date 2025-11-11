@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Car, 
   MapPin, 
@@ -11,10 +11,14 @@ import {
   Activity,
   BarChart3,
   Zap,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 import CountUp from 'react-countup';
-import { parqueaderoService, entradaService } from '../services/index';
+import { parqueaderoService, entradaService, salidaService } from '../services/index';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import EmptyState from '../components/EmptyState';
+import AlertasCapacidad from '../components/AlertasCapacidad';
 import '../assets/scss/parknow-colors.css';
 
 interface DashboardStats {
@@ -60,6 +64,7 @@ const DashboardAnalytics = () => {
   const [parqueaderos, setParqueaderos] = useState<ParqueaderoStatus[]>([]);
   const [vehiculosPorTipo, setVehiculosPorTipo] = useState<VehiculosPorTipo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState('today');
 
   // const { user } = useAuth();
@@ -81,6 +86,26 @@ const DashboardAnalytics = () => {
       // Obtener entradas activas para calcular ocupación
       const entradasResponse = await entradaService.getAll();
       console.log('🚗 Respuesta entradas:', entradasResponse);
+      
+      // Obtener salidas para filtrar entradas activas
+      const salidasResponse = await salidaService.getAll();
+      console.log('🚪 Respuesta salidas:', salidasResponse);
+      
+      // Filtrar solo entradas activas (sin salida registrada)
+      let entradasActivas: any[] = [];
+      if (entradasResponse.success && entradasResponse.entradas) {
+        const idsConSalida = new Set(
+          salidasResponse.success && salidasResponse.salidas 
+            ? salidasResponse.salidas.map((s: any) => s.entradaId || s.id_entrada)
+            : []
+        );
+        
+        entradasActivas = entradasResponse.entradas.filter((entrada: any) => 
+          !idsConSalida.has(entrada.id)
+        );
+      }
+      
+      console.log('✅ Entradas activas (sin salida):', entradasActivas);
       
       // Procesar datos de parqueaderos con ocupación real
       const parqueaderosData: ParqueaderoStatus[] = parqueaderosResponse.parqueaderos.map((p: any) => {
@@ -114,23 +139,23 @@ const DashboardAnalytics = () => {
       const espaciosOcupados = espaciosTotales - espaciosDisponibles;
       const ocupacionPromedio = espaciosTotales > 0 ? Math.round((espaciosOcupados / espaciosTotales) * 100) : 0;
       
-      // Calcular estadísticas del día actual usando las entradas
+      // Calcular estadísticas del día actual usando SOLO las entradas activas
       let vehiculosHoy = 0;
       let tiempoPromedioEstadia = 2.5; // Valor por defecto
       
-      if (entradasResponse.success && entradasResponse.entradas) {
+      if (entradasActivas.length > 0) {
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
         const mañana = new Date(hoy);
         mañana.setDate(mañana.getDate() + 1);
         
-        vehiculosHoy = entradasResponse.entradas.filter((entrada: any) => {
+        vehiculosHoy = entradasActivas.filter((entrada: any) => {
           const fechaEntrada = new Date(entrada.fechaHoraEntrada);
           return fechaEntrada >= hoy && fechaEntrada < mañana;
         }).length;
       }
       
-      // Generar distribución por tipo de vehículo usando datos reales
+      // Generar distribución por tipo de vehículo usando SOLO entradas activas
       const vehiculosPorTipo: VehiculosPorTipo[] = [];
       const tiposVehiculos: Record<string, {cantidad: number, color: string}> = {
         'carro': { cantidad: 0, color: 'bg-blue-500' },
@@ -138,8 +163,8 @@ const DashboardAnalytics = () => {
         'bicicleta': { cantidad: 0, color: 'bg-orange-500' },
       };
       
-      if (entradasResponse.success && entradasResponse.entradas) {
-        entradasResponse.entradas.forEach((entrada: any) => {
+      if (entradasActivas.length > 0) {
+        entradasActivas.forEach((entrada: any) => {
           const tipo = entrada.Vehiculo?.tipo?.toLowerCase() || 'otro';
           if (tiposVehiculos[tipo]) {
             tiposVehiculos[tipo].cantidad++;
@@ -198,9 +223,16 @@ const DashboardAnalytics = () => {
       setStats(statsData);
       setParqueaderos(parqueaderosData);
       setVehiculosPorTipo(vehiculosPorTipo);
+      setLastUpdate(new Date());
       
-    } catch (error) {
-      console.error('❌ Error cargando datos del dashboard:', error);
+    } catch (error: any) {
+      console.error('❌ Error cargando datos del dashboard:', {
+        message: error?.message || 'Error desconocido',
+        response: error?.response?.data,
+        status: error?.response?.status,
+        error: error
+      });
+      
       // Mostrar datos por defecto en caso de error
       setStats({
         espaciosTotales: 0,
@@ -220,22 +252,39 @@ const DashboardAnalytics = () => {
   }, []); // Sin dependencias para evitar recreaciones innecesarias
 
   useEffect(() => {
-    // Cargar datos al montar el componente o cuando cambie selectedPeriod
+    // Cargar datos al montar el componente
     cargarDatosDashboardMemo();
     
-    // Actualizar cada 30 segundos, pero incrementamos a 60 segundos para reducir llamadas
-    const interval = setInterval(cargarDatosDashboardMemo, 60000); // Aumentado a 60000ms (60 segundos)
+    // Escuchar eventos de actualización desde otros componentes (entrada/salida)
+    // Sin intervalo automático - solo reacciona a eventos
+    const handleRefreshData = () => {
+      console.log('🔄 Dashboard: Recibido evento de actualización (entrada/salida)');
+      cargarDatosDashboardMemo();
+    };
     
-    // Limpiar intervalo cuando se desmonte el componente
-    return () => clearInterval(interval);
+    window.addEventListener('refreshDashboard', handleRefreshData);
+    
+    // Limpiar event listener cuando se desmonte el componente
+    return () => {
+      window.removeEventListener('refreshDashboard', handleRefreshData);
+    };
   }, [cargarDatosDashboardMemo]); // Dependencia en la función memoizada
 
-  // Función para cargar datos manualmente, ahora solo se usa cuando el usuario
-  // explícitamente solicita una recarga de datos (no en intervalos automáticos)
-  // const cargarDatosDashboard = () => {
-  //   // Llamamos a la versión memoizada
-  //   cargarDatosDashboardMemo();
-  // };
+  // Función para cargar datos manualmente
+  const cargarDatosDashboard = useCallback(() => {
+    console.log('📊 Dashboard: Recarga manual solicitada');
+    cargarDatosDashboardMemo();
+  }, [cargarDatosDashboardMemo]);
+
+  // Exponer la función de recarga para que pueda ser llamada desde otros componentes
+  useEffect(() => {
+    // Hacer disponible la función globalmente para otros componentes
+    (window as any).refreshDashboard = cargarDatosDashboard;
+    
+    return () => {
+      delete (window as any).refreshDashboard;
+    };
+  }, [cargarDatosDashboard]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -283,27 +332,63 @@ const DashboardAnalytics = () => {
 
   return (
     <div className="container-fluid">
-      {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard ParkNow</h1>
-          <p className="text-gray-600">Monitoreo en tiempo real del sistema de parqueaderos</p>
-        </div>
-        
-        <div className="mt-4 sm:mt-0">
-          <select
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="today">Hoy</option>
-            <option value="week">Esta semana</option>
-            <option value="month">Este mes</option>
-            <option value="year">Este año</option>
-          </select>
+      {/* Header Mejorado */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard ParkNow</h1>
+            <p className="text-gray-600">Monitoreo en tiempo real del sistema de parqueaderos</p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            {/* Última actualización */}
+            {lastUpdate && (
+              <div className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-md">
+                <span className="font-medium">Actualizado:</span> {lastUpdate.toLocaleTimeString()}
+              </div>
+            )}
+            
+            {/* Botón Refresh */}
+            <button
+              onClick={() => cargarDatosDashboardMemo()}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </button>
+            
+            {/* Selector de período */}
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="today">Hoy</option>
+              <option value="week">Esta semana</option>
+              <option value="month">Este mes</option>
+              <option value="year">Este año</option>
+            </select>
+          </div>
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && parqueaderos.length === 0 ? (
+        <div>
+          <LoadingSkeleton count={4} type="card" />
+        </div>
+      ) : parqueaderos.length === 0 ? (
+        <EmptyState
+          icon={MapPin}
+          title="No hay parqueaderos"
+          description="Comienza agregando un parqueadero al sistema"
+        />
+      ) : (
+        <>
+        {/* Alertas de Capacidad */}
+        <AlertasCapacidad parqueaderos={parqueaderos} />
+        
       {/* Estadísticas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         {/* Espacios Totales */}
@@ -545,6 +630,8 @@ const DashboardAnalytics = () => {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

@@ -18,6 +18,8 @@ import { HorarioController } from './presentation/HorarioController.js';
 import { ParqueaderoUsuarioController } from './presentation/ParqueaderoUsuarioController.js';
 import { FestivoController } from './presentation/FestivoController.js';
 import { NotificacionController } from './presentation/NotificacionController.js';
+import { VehiculoController } from './presentation/VehiculoController.js';
+import { TarifaCalculoController } from './presentation/TarifaCalculoController.js';
 
 // Configuración
 dotenv.config();
@@ -96,6 +98,8 @@ const horarioController = new HorarioController();
 const parqueaderoUsuarioController = new ParqueaderoUsuarioController();
 const festivoController = new FestivoController();
 const notificacionController = new NotificacionController();
+const vehiculoController = new VehiculoController();
+const tarifaCalculoController = new TarifaCalculoController(mqttService);
 
 // Health check endpoint para Render
 app.get('/api/health', (req, res) => {
@@ -114,6 +118,7 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       parqueaderos: '/api/parqueaderos',
+      vehiculos: '/api/vehiculos',
       entradas: '/api/entradas',
       salidas: '/api/salidas',
       reportes: '/api/reportes',
@@ -142,6 +147,15 @@ app.put('/api/parqueaderos/:id', authMiddleware, adminMiddleware, parqueaderoCon
 app.delete('/api/parqueaderos/:id', authMiddleware, adminMiddleware, parqueaderoController.eliminar.bind(parqueaderoController));
 app.get('/api/parqueaderos/alertas/capacidad-baja', authMiddleware, parqueaderoController.verificarCapacidadBaja.bind(parqueaderoController));
 
+// Rutas de vehículos
+app.post('/api/vehiculos', authMiddleware, vehiculoController.crear.bind(vehiculoController));
+app.get('/api/vehiculos', authMiddleware, vehiculoController.obtenerTodos.bind(vehiculoController));
+app.get('/api/vehiculos/:id', authMiddleware, vehiculoController.obtenerPorId.bind(vehiculoController));
+app.get('/api/vehiculos/placa/:placa', authMiddleware, vehiculoController.obtenerPorPlaca.bind(vehiculoController));
+app.get('/api/vehiculos/tipo/:tipo', authMiddleware, vehiculoController.obtenerPorTipo.bind(vehiculoController));
+app.put('/api/vehiculos/:id', authMiddleware, adminMiddleware, vehiculoController.actualizar.bind(vehiculoController));
+app.delete('/api/vehiculos/:id', authMiddleware, adminMiddleware, vehiculoController.eliminar.bind(vehiculoController));
+
 // Rutas de entradas
 app.post('/api/entradas', authMiddleware, entradaController.registrar.bind(entradaController));
 app.get('/api/entradas', authMiddleware, entradaController.obtenerTodas.bind(entradaController));
@@ -164,6 +178,10 @@ app.get('/api/tarifas/:id', authMiddleware, tarifaController.obtenerPorId.bind(t
 app.post('/api/tarifas', authMiddleware, adminMiddleware, tarifaController.crear.bind(tarifaController));
 app.put('/api/tarifas/:id', authMiddleware, adminMiddleware, tarifaController.actualizar.bind(tarifaController));
 app.delete('/api/tarifas/:id', authMiddleware, adminMiddleware, tarifaController.eliminar.bind(tarifaController));
+
+// Rutas de cálculo de tarifas
+app.post('/api/tarifas/calcular-costo', authMiddleware, tarifaCalculoController.calcularCosto.bind(tarifaCalculoController));
+app.get('/api/tarifas/parqueadero/:parqueaderoId', authMiddleware, tarifaCalculoController.obtenerTarifasParqueadero.bind(tarifaCalculoController));
 
 // Rutas de usuarios (administración)
 app.get('/api/usuarios', authMiddleware, adminMiddleware, usuarioController.obtenerTodos.bind(usuarioController));

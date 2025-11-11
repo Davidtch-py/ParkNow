@@ -11,6 +11,7 @@ export class TarifaController {
         tarifas
       });
     } catch (error) {
+      console.error('❌ Error obteniendo tarifas:', error.message);
       res.status(500).json({
         success: false,
         error: 'Error interno del servidor'
@@ -35,6 +36,7 @@ export class TarifaController {
         tarifa
       });
     } catch (error) {
+      console.error('❌ Error obteniendo tarifa:', error.message);
       res.status(500).json({
         success: false,
         error: 'Error interno del servidor'
@@ -44,19 +46,38 @@ export class TarifaController {
 
   async crear(req, res) {
     try {
-      const { tipoVehiculo, tarifaPorHora, tarifaFija } = req.body;
+      const { parqueaderoId, tipoVehiculo, tarifaHora, tarifaDia, tarifaMes, vigenciaDesde, vigenciaHasta } = req.body;
 
-      if (!tipoVehiculo || (!tarifaPorHora && !tarifaFija)) {
+      // Validaciones
+      if (!parqueaderoId || !tipoVehiculo) {
         return res.status(400).json({
           success: false,
-          error: 'Tipo de vehículo y al menos una tarifa son requeridos'
+          error: 'ParqueaderoId y tipoVehiculo son requeridos'
+        });
+      }
+
+      if (!tarifaHora || !tarifaDia || !tarifaMes) {
+        return res.status(400).json({
+          success: false,
+          error: 'Todas las tarifas (hora, día, mes) son requeridas'
+        });
+      }
+
+      if (!vigenciaDesde || !vigenciaHasta) {
+        return res.status(400).json({
+          success: false,
+          error: 'Vigencia desde y hasta son requeridas'
         });
       }
 
       const nuevaTarifa = await tarifaRepository.create({
+        parqueaderoId,
         tipoVehiculo,
-        tarifaPorHora: tarifaPorHora || 0,
-        tarifaFija: tarifaFija || 0
+        tarifaHora: parseFloat(tarifaHora),
+        tarifaDia: parseFloat(tarifaDia),
+        tarifaMes: parseFloat(tarifaMes),
+        vigenciaDesde: new Date(vigenciaDesde),
+        vigenciaHasta: new Date(vigenciaHasta)
       });
 
       res.status(201).json({
@@ -64,6 +85,7 @@ export class TarifaController {
         tarifa: nuevaTarifa
       });
     } catch (error) {
+      console.error('❌ Error creando tarifa:', error.message);
       res.status(500).json({
         success: false,
         error: 'Error interno del servidor'
@@ -74,7 +96,7 @@ export class TarifaController {
   async actualizar(req, res) {
     try {
       const { id } = req.params;
-      const { tipoVehiculo, tarifaPorHora, tarifaFija } = req.body;
+      const { tipoVehiculo, tarifaHora, tarifaDia, tarifaMes, vigenciaDesde, vigenciaHasta } = req.body;
 
       const tarifa = await tarifaRepository.findById(id);
       if (!tarifa) {
@@ -86,8 +108,11 @@ export class TarifaController {
 
       const tarifaActualizada = await tarifaRepository.update(id, {
         tipoVehiculo: tipoVehiculo || tarifa.tipoVehiculo,
-        tarifaPorHora: tarifaPorHora !== undefined ? tarifaPorHora : tarifa.tarifaPorHora,
-        tarifaFija: tarifaFija !== undefined ? tarifaFija : tarifa.tarifaFija
+        tarifaHora: tarifaHora !== undefined ? parseFloat(tarifaHora) : tarifa.tarifaHora,
+        tarifaDia: tarifaDia !== undefined ? parseFloat(tarifaDia) : tarifa.tarifaDia,
+        tarifaMes: tarifaMes !== undefined ? parseFloat(tarifaMes) : tarifa.tarifaMes,
+        vigenciaDesde: vigenciaDesde ? new Date(vigenciaDesde) : tarifa.vigenciaDesde,
+        vigenciaHasta: vigenciaHasta ? new Date(vigenciaHasta) : tarifa.vigenciaHasta
       });
 
       res.json({
@@ -95,6 +120,7 @@ export class TarifaController {
         tarifa: tarifaActualizada
       });
     } catch (error) {
+      console.error('❌ Error actualizando tarifa:', error.message);
       res.status(500).json({
         success: false,
         error: 'Error interno del servidor'
@@ -121,6 +147,7 @@ export class TarifaController {
         message: 'Tarifa eliminada correctamente'
       });
     } catch (error) {
+      console.error('❌ Error eliminando tarifa:', error.message);
       res.status(500).json({
         success: false,
         error: 'Error interno del servidor'
@@ -128,3 +155,4 @@ export class TarifaController {
     }
   }
 }
+

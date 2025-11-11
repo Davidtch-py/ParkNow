@@ -98,7 +98,7 @@ const Vehiculo = sequelize.define('Vehiculo', {
   },
   color: {
     type: DataTypes.STRING(30),
-    allowNull: true
+    allowNull: false
   },
   marca: {
     type: DataTypes.STRING(50),
@@ -110,7 +110,7 @@ const Vehiculo = sequelize.define('Vehiculo', {
   },
   propietario: {
     type: DataTypes.STRING(100),
-    allowNull: false
+    allowNull: true
   },
   telefono: {
     type: DataTypes.STRING(15),

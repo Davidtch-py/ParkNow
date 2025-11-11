@@ -92,6 +92,43 @@ export const authService = {
   }
 };
 
+export const vehiculoService = {
+  async getAll() {
+    const response = await api.get('/vehiculos');
+    return response.data;
+  },
+
+  async getById(id: string | number) {
+    const response = await api.get(`/vehiculos/${id}`);
+    return response.data;
+  },
+
+  async create(vehiculoData: any) {
+    const response = await api.post('/vehiculos', vehiculoData);
+    return response.data;
+  },
+
+  async update(id: string | number, vehiculoData: any) {
+    const response = await api.put(`/vehiculos/${id}`, vehiculoData);
+    return response.data;
+  },
+
+  async delete(id: string | number) {
+    const response = await api.delete(`/vehiculos/${id}`);
+    return response.data;
+  },
+
+  async getByPlaca(placa: string) {
+    const response = await api.get(`/vehiculos/placa/${placa}`);
+    return response.data;
+  },
+
+  async getByTipo(tipo: string) {
+    const response = await api.get(`/vehiculos/tipo/${tipo}`);
+    return response.data;
+  }
+};
+
 export const parqueaderoService = {
   async getAll() {
     const response = await api.get('/parqueaderos');
@@ -233,6 +270,21 @@ export const tarifaService = {
 
   async toggleEstado(id: string | number, activa: boolean) {
     const response = await api.put(`/tarifas/${id}`, { activa });
+    return response.data;
+  },
+
+  async calcularCosto(parqueaderoId: string | number, tipoVehiculo: string, fechaIngreso: Date, fechaSalida?: Date) {
+    const response = await api.post('/tarifas/calcular-costo', {
+      parqueaderoId,
+      tipoVehiculo,
+      fechaIngreso: fechaIngreso.toISOString(),
+      fechaSalida: fechaSalida ? fechaSalida.toISOString() : undefined
+    });
+    return response.data;
+  },
+
+  async obtenerTarifasParqueadero(parqueaderoId: string | number) {
+    const response = await api.get(`/tarifas/parqueadero/${parqueaderoId}`);
     return response.data;
   }
 };
