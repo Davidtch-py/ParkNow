@@ -86,6 +86,57 @@ app.get('/api/test/db', async (req, res) => {
   }
 });
 
+// Ruta de debug para verificar entradas por parqueadero
+app.get('/api/test/debug/entradas/:parqueaderoId', async (req, res) => {
+  try {
+    const { parqueaderoId } = req.params;
+    
+    // Verificar espacios del parqueadero
+    const espacios = await sequelize.query(
+      'SELECT * FROM espacios WHERE id_parqueadero = ?',
+      { replacements: [parqueaderoId], type: sequelize.QueryTypes.SELECT }
+    );
+    
+    // Verificar registros activos
+    const registros = await sequelize.query(
+      `SELECT r.id, r.id_vehiculo, r.id_espacio, r.id_usuario, r.fecha_ingreso, r.fecha_salida,
+              v.placa, v.tipo, e.id_parqueadero, e.codigo_espacio
+       FROM registros r
+       LEFT JOIN vehiculos v ON r.id_vehiculo = v.id
+       LEFT JOIN espacios e ON r.id_espacio = e.id
+       WHERE r.fecha_salida IS NULL`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    
+    // Verificar registros con espacios de este parqueadero
+    const registrosDelParqueadero = await sequelize.query(
+      `SELECT r.id, r.id_vehiculo, r.id_espacio, r.id_usuario, r.fecha_ingreso, r.fecha_salida,
+              v.placa, v.tipo, e.id_parqueadero, e.codigo_espacio
+       FROM registros r
+       LEFT JOIN vehiculos v ON r.id_vehiculo = v.id
+       LEFT JOIN espacios e ON r.id_espacio = e.id
+       WHERE r.fecha_salida IS NULL AND e.id_parqueadero = ?`,
+      { replacements: [parqueaderoId], type: sequelize.QueryTypes.SELECT }
+    );
+    
+    res.json({
+      success: true,
+      parqueaderoId,
+      espacios,
+      totalEspacios: espacios.length,
+      registrosActivos: registros,
+      totalRegistrosActivos: registros.length,
+      registrosDelParqueadero,
+      totalRegistrosDelParqueadero: registrosDelParqueadero.length
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Instanciar controladores
 const authController = new AuthController();
 const parqueaderoController = new ParqueaderoController();
@@ -287,35 +338,6 @@ async function insertSeedData() {
     ]);
 
     // Insertar vehículos
-    const vehiculos = await Vehiculo.bulkCreate([
-      {
-        placa: 'ABC123',
-        tipo: 'carro',
-        color: 'Blanco',
-        marca: 'Toyota',
-        modelo: 'Corolla',
-        propietario: 'Pedro Martínez',
-        telefono: '3001234567'
-      },
-      {
-        placa: 'DEF456',
-        tipo: 'carro',
-        color: 'Negro',
-        marca: 'Chevrolet',
-        modelo: 'Aveo',
-        propietario: 'Ana López',
-        telefono: '3009876543'
-      },
-      {
-        placa: 'GHI789',
-        tipo: 'moto',
-        color: 'Rojo',
-        marca: 'Yamaha',
-        modelo: 'FZ150',
-        propietario: 'Luis Sánchez',
-        telefono: '3005551234'
-      }
-    ]);
 
     // Insertar algunos registros activos (entradas sin salida)
     await Registro.bulkCreate([

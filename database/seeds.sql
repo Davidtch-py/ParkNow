@@ -51,7 +51,7 @@ INSERT INTO tipos_vehiculos (nombre, descripcion) VALUES
 INSERT INTO parqueaderos (nombre, direccion, ciudad, capacidad_total, latitud, longitud) VALUES
 ('ParkNow Centro', 'Calle 15 #10-23', 'Bogotá', 100, 4.6097, -74.0817),
 ('ParkNow Norte', 'Carrera 7 #45-67', 'Bogotá', 150, 4.6533, -74.0836),
-('ParkNow Sur', 'Avenida 1 #30-15', 'Bogotá', 80, 4.5709, -74.1066),
+('ParkNow Sur', 'Avenida 1 #30-15', 'Bogotá', 7, 4.5709, -74.1066),
 ('ParkNow Medellín Centro', 'Carrera 50 #20-30', 'Medellín', 120, 6.2442, -75.5812);
 
 -- Insertar espacios de parqueo (CORREGIDO: usando codigo_espacio en lugar de numero)
@@ -65,6 +65,10 @@ INSERT INTO espacios (id_parqueadero, codigo_espacio, estado) VALUES
 (2, 'A01', 'LIBRE'), (2, 'A02', 'OCUPADO'), (2, 'A03', 'LIBRE'),
 (2, 'B01', 'LIBRE'), (2, 'B02', 'LIBRE'),
 (2, 'M01', 'LIBRE'), (2, 'M02', 'OCUPADO');
+-- Espacios para ParkNow Sur (id: 3)
+(3, 'A01', 'OCUPADO'), (3, 'A02', 'OCUPADO'), (3, 'A03', 'OCUPADO'),
+(3, 'B01', 'OCUPADO'), (3, 'B02', 'OCUPADO'),
+(3, 'M01', 'LIBRE'), (3, 'M02', 'OCUPADO');
 
 -- Insertar vehículos
 INSERT INTO vehiculos (placa, id_tipo_vehiculo, marca, modelo, color, propietario, telefono) VALUES

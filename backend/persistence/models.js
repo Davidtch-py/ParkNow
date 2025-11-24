@@ -92,6 +92,7 @@ const Vehiculo = sequelize.define('Vehiculo', {
   tipo: {
     type: DataTypes.STRING(20),
     allowNull: false,
+    field: 'tipo', // Mapear a la columna 'tipo' en la BD (para compatibilidad con aplicación)
     validate: {
       isIn: [['carro', 'moto', 'bicicleta']]
     }

@@ -92,15 +92,23 @@ const RegistroEntradaSalida = () => {
         console.log('📡 Llamando a API: /entradas/parqueadero/' + formEntrada.parqueaderoId + '/activas');
         const response = await entradaService.getActivas(formEntrada.parqueaderoId);
         
-        console.log('📥 Respuesta de API:', response);
+        console.log('📥 Respuesta de API completa:', response);
+        console.log('📥 Response.success:', response.success);
+        console.log('📥 Response.entradas:', response.entradas);
+        console.log('📥 Número de entradas:', response.entradas?.length);
         
         if (response.success && response.entradas) {
           console.log('📊 Entradas encontradas en BD:', response.entradas.length);
-          console.log('📋 Datos de entradas:', response.entradas);
+          console.log('📋 Datos crudos de entradas:', JSON.stringify(response.entradas, null, 2));
           
           // Mapear las entradas desde la estructura de la BD (tabla registros)
           const entradasFormateadas: EntradaActiva[] = response.entradas.map((entrada: any) => {
             console.log('🔄 Mapeando entrada:', entrada);
+            console.log('   - id:', entrada.id);
+            console.log('   - id_espacio:', entrada.id_espacio);
+            console.log('   - espacio?.parqueadero?.id:', entrada.espacio?.parqueadero?.id);
+            console.log('   - vehiculo?.placa:', entrada.vehiculo?.placa);
+            
             return {
               id: entrada.id,
               vehiculoId: entrada.id_vehiculo || entrada.vehiculoId,
@@ -116,10 +124,12 @@ const RegistroEntradaSalida = () => {
           });
           
           console.log('✅ Entradas formateadas:', entradasFormateadas);
+          console.log('✅ Cantidad de entradas formateadas:', entradasFormateadas.length);
           setEntradasActivas(entradasFormateadas);
           console.log('✅ Entradas activas cargadas:', entradasFormateadas.length);
         } else {
           console.log('⚠️ No se encontraron entradas o success=false');
+          console.log('⚠️ Response:', response);
           setEntradasActivas([]);
         }
       } else {
@@ -261,7 +271,7 @@ const RegistroEntradaSalida = () => {
       }
 
     } catch (error) {
-      toast.error('Error de conexión al registrar entrada');
+      toast.error('El vehiculo ya tiene una entrada activa');
     } finally {
       setLoading(false);
     }
