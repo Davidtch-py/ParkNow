@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Car, 
   MapPin, 
@@ -19,6 +20,7 @@ import { parqueaderoService, entradaService, salidaService } from '../services/i
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import AlertasCapacidad from '../components/AlertasCapacidad';
+import { useAuth } from '../context/AuthContext';
 import '../assets/scss/parknow-colors.css';
 
 interface DashboardStats {
@@ -67,17 +69,36 @@ const DashboardAnalytics = () => {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState('today');
 
-  // const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   // Memoizamos la función cargarDatosDashboard para evitar recreaciones innecesarias
   const cargarDatosDashboardMemo = React.useCallback(async () => {
     try {
       setLoading(true);
       console.log('🔄 Cargando datos del dashboard...');
+      console.log('👤 Usuario actual:', user);
+      console.log('🔐 Es admin:', isAdmin);
       
-      // Obtener datos de parqueaderos
-      const parqueaderosResponse = await parqueaderoService.getAll();
-      console.log('📊 Respuesta parqueaderos:', parqueaderosResponse);
+      // Obtener datos de parqueaderos según el rol del usuario
+      let parqueaderosResponse;
+      if (isAdmin) {
+        // Admin ve todos los parqueaderos
+        parqueaderosResponse = await parqueaderoService.getAll();
+        console.log('📊 [ADMIN] Respuesta parqueaderos (todos):', parqueaderosResponse);
+      } else {
+        // Controlador solo ve sus parqueaderos asignados
+        parqueaderosResponse = await parqueaderoService.getParqueaderosPorControlador();
+        console.log('📊 [CONTROLADOR] Respuesta parqueaderos (asignados):', parqueaderosResponse);
+        
+        // Adaptar la respuesta al formato esperado
+        if (parqueaderosResponse.success && parqueaderosResponse.parqueaderos) {
+          parqueaderosResponse = {
+            success: true,
+            parqueaderos: parqueaderosResponse.parqueaderos
+          };
+        }
+      }
       
       if (!parqueaderosResponse.success) {
         throw new Error('Error al cargar parqueaderos');
@@ -508,12 +529,18 @@ const DashboardAnalytics = () => {
             <div className="p-6">
               <div className="space-y-4">
                 {parqueaderos.map((parqueadero) => (
-                  <div key={parqueadero.id} className="border border-gray-200 rounded-lg p-4">
+                  <div 
+                    key={parqueadero.id} 
+                    className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all duration-200"
+                    onClick={() => navigate(`/parqueadero/${parqueadero.id}`)}
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
                         <MapPin className="h-5 w-5 text-gray-400" />
                         <div>
-                          <h4 className="font-medium text-gray-900">{parqueadero.nombre}</h4>
+                          <h4 className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                            {parqueadero.nombre}
+                          </h4>
                           <p className="text-sm text-gray-500">
                             {parqueadero.ocupados}/{parqueadero.capacidadTotal} espacios ocupados
                           </p>

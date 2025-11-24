@@ -158,6 +158,14 @@ export const parqueaderoService = {
   async getCapacidadBaja(umbral: number = 10) {
     const response = await api.get(`/parqueaderos/alertas/capacidad-baja?umbral=${umbral}`);
     return response.data;
+  },
+
+  async getParqueaderosPorControlador(idUsuario?: string | number) {
+    const url = idUsuario 
+      ? `/parqueaderos-usuarios/controlador/${idUsuario}` 
+      : '/parqueaderos-usuarios/controlador';
+    const response = await api.get(url);
+    return response.data;
   }
 };
 
@@ -413,6 +421,45 @@ export const horarioService = {
 
   async delete(id: string | number) {
     const response = await api.delete(`/horarios/${id}`);
+    return response.data;
+  }
+};
+
+export const espacioService = {
+  async getAll(parqueaderoId?: string | number, estado?: string) {
+    const params = new URLSearchParams();
+    if (parqueaderoId) params.append('parqueaderoId', parqueaderoId.toString());
+    if (estado) params.append('estado', estado);
+    
+    const queryString = params.toString();
+    const url = queryString ? `/espacios?${queryString}` : '/espacios';
+    
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  async getEspaciosPorParqueadero(idParqueadero: string | number) {
+    const response = await api.get(`/espacios/parqueadero/${idParqueadero}`);
+    return response.data;
+  },
+
+  async getDisponibles(idParqueadero: string | number) {
+    const response = await api.get(`/espacios/parqueadero/${idParqueadero}/disponibles`);
+    return response.data;
+  },
+
+  async create(espacioData: any) {
+    const response = await api.post('/espacios', espacioData);
+    return response.data;
+  },
+
+  async update(id: string | number, espacioData: any) {
+    const response = await api.put(`/espacios/${id}`, espacioData);
+    return response.data;
+  },
+
+  async delete(id: string | number) {
+    const response = await api.delete(`/espacios/${id}`);
     return response.data;
   }
 };

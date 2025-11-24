@@ -20,6 +20,7 @@ import { FestivoController } from './presentation/FestivoController.js';
 import { NotificacionController } from './presentation/NotificacionController.js';
 import { VehiculoController } from './presentation/VehiculoController.js';
 import { TarifaCalculoController } from './presentation/TarifaCalculoController.js';
+import { EspacioController } from './presentation/EspacioController.js';
 
 // Configuración
 dotenv.config();
@@ -151,6 +152,7 @@ const festivoController = new FestivoController();
 const notificacionController = new NotificacionController();
 const vehiculoController = new VehiculoController();
 const tarifaCalculoController = new TarifaCalculoController(mqttService);
+const espacioController = new EspacioController();
 
 // Health check endpoint para Render
 app.get('/api/health', (req, res) => {
@@ -271,6 +273,15 @@ app.delete('/api/festivos/:id', authMiddleware, adminMiddleware, festivoControll
 app.get('/api/notificaciones/config', authMiddleware, notificacionController.obtenerConfiguracion.bind(notificacionController));
 app.get('/api/notificaciones/stats', authMiddleware, adminMiddleware, notificacionController.obtenerEstadisticas.bind(notificacionController));
 app.post('/api/notificaciones/prueba', authMiddleware, adminMiddleware, notificacionController.enviarPrueba.bind(notificacionController));
+
+// Rutas de espacios
+app.get('/api/espacios', authMiddleware, espacioController.obtenerTodos.bind(espacioController));
+app.get('/api/espacios/parqueadero/:idParqueadero', authMiddleware, espacioController.obtenerEspaciosPorParqueadero.bind(espacioController));
+app.get('/api/espacios/parqueadero/:idParqueadero/disponibles', authMiddleware, espacioController.obtenerDisponibles.bind(espacioController));
+app.post('/api/espacios/parqueadero/:idParqueadero/generar', authMiddleware, adminMiddleware, espacioController.generarEspacios.bind(espacioController));
+app.post('/api/espacios', authMiddleware, adminMiddleware, espacioController.crear.bind(espacioController));
+app.put('/api/espacios/:id', authMiddleware, adminMiddleware, espacioController.actualizar.bind(espacioController));
+app.delete('/api/espacios/:id', authMiddleware, adminMiddleware, espacioController.eliminar.bind(espacioController));
 
 // Manejo de errores
 app.use(errorHandler);

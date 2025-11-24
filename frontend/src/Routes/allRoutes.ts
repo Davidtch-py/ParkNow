@@ -10,6 +10,7 @@ import GestionTarifas from "views/GestionTarifas";
 import LoginBoxedParkNow from "views/LoginBoxed";
 import UsuariosSimple from "views/UsuariosSimple";
 import TestComponent from "views/TestComponent";
+import DetalleParqueadero from "views/DetalleParqueadero";
 
 // Componentes UI básicos necesarios
 import UiButtons from "pages/Components/UIElement/UiButtons";
@@ -64,6 +65,7 @@ const authProtectedRoutes: Array<RouteObject> = [
   { path: "/parknow-dashboard", component: DashboardAnalytics },
   { path: "/parknow-parqueaderos", component: ParqueaderoWizard },
   { path: "/parqueaderos", component: ParqueaderoWizard },
+  { path: "/parqueadero/:id", component: DetalleParqueadero },
   { path: "/parknow-usuarios", component: UsuariosListView },
   { path: "/usuarios", component: UsuariosListView },
   { path: "/usuarios-simple", component: UsuariosSimple },

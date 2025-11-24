@@ -216,7 +216,9 @@ const GestionTarifas = () => {
         totalTarifas: (sourceTarifas as any[]).length,
         tarifasActivas: (sourceTarifas as any[]).filter(t => t.activa).length,
         promedioTarifaCarros: promedioCarros,
-        ingresosDiarios: 2450000 // Simulado (mantener valor por ahora)
+        // Calcular ingresos diarios estimados basados en el promedio de tarifas de carros
+        // Asumimos un promedio de 100 vehículos por día como base
+        ingresosDiarios: promedioCarros * 100
       };
       setEstadisticas(stats);
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Car, Clock, User, MapPin, LogIn, LogOut, Search } from 'lucide-react';
+import { Car, Clock, User, MapPin, LogIn, LogOut, Search, Bike} from 'lucide-react';
 import { entradaService, salidaService, parqueaderoService, vehiculoService, tarifaService } from '../services/index';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
@@ -422,9 +422,9 @@ const RegistroEntradaSalida = () => {
       case 'carro':
         return <Car className="h-5 w-5 text-blue-600" />;
       case 'moto':
-        return <Car className="h-5 w-5 text-green-600" />; // En un proyecto real usarías un ícono de moto
+        return <Bike className="h-5 w-5 text-green-600" />; // En un proyecto real usarías un ícono de moto
       case 'bicicleta':
-        return <Car className="h-5 w-5 text-orange-600" />; // En un proyecto real usarías un ícono de bicicleta
+        return <Bike className="h-5 w-5 text-orange-600" />; // En un proyecto real usarías un ícono de bicicleta
       default:
         return <Car className="h-5 w-5 text-gray-600" />;
     }
