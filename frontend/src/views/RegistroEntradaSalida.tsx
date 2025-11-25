@@ -648,7 +648,7 @@ const RegistroEntradaSalida = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="inline-flex items-center px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    className="inline-flex items-center px-6 py-2 text-black font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" style={{ backgroundColor: 'var(--park-blue)' }}
                   >
                     {loading ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

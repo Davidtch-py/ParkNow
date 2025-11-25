@@ -38,21 +38,6 @@ const SimpleHeader = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
 
         {/* Right side - User profile and actions */}
         <div className="flex items-center space-x-4">
-          <button
-            type="button"
-            onClick={toggleDarkMode}
-            className="p-2 text-gray-500 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none"
-          >
-            {darkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
-          </button>
-
-          <button
-            type="button"
-            className="p-2 text-gray-500 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none relative"
-          >
-            <Bell className="size-5" />
-            <span className="absolute top-1 right-1 size-2 bg-red-500 rounded-full"></span>
-          </button>
 
           <div className="relative">
             <button

@@ -250,7 +250,7 @@ const AlertasCapacidad = () => {
           <button
             onClick={cargarAlertas}
             disabled={loading}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="inline-flex items-center px-4 py-2 text-black rounded-md hover:bg-blue-700 disabled:opacity-50" style={{ backgroundColor: 'var(--park-blue)' }}
           >
             <RefreshCw className={`size-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
@@ -259,11 +259,11 @@ const AlertasCapacidad = () => {
           {/* 🧪 BOTÓN DE PRUEBA TEMPORAL */}
           <button
             onClick={simularAlertaCapacidad}
-            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 border-2 border-purple-400"
+            className="inline-flex items-center px-4 py-2 text-black rounded-md hover:bg-black-700 border-2 border-black-400" style={{ backgroundColor: 'var(--park-blue-dark)' }}
             title="Simular alerta de capacidad baja para pruebas MQTT"
           >
             <Bell className="size-4 mr-2" />
-            🧪 Simular Alerta
+            Simular Alerta
           </button>
           
           <button

@@ -157,6 +157,7 @@ const ParqueaderoWizard = () => {
                                                     ? 'bg-green-100 text-green-700 border-green-300'
                                                     : 'text-slate-500 bg-slate-50 border-slate-200'
                                             }`}
+                                            style={isActive ? { backgroundColor: 'var(--park-blue)' } : {}}
                                         >
                                             <Icon className={`block h-6 mx-auto mb-2 ${
                                                 isActive ? 'text-white' : isCompleted ? 'text-green-600' : 'text-slate-400'
@@ -401,7 +402,7 @@ const ParqueaderoWizard = () => {
                                         <button 
                                             type="button" 
                                             onClick={handleNextStep}
-                                            className="px-4 py-2 text-white bg-blue-500 border border-blue-500 rounded-md hover:bg-blue-600"
+                                            className="px-4 py-2 text-black border border-blue-500 rounded-md hover:bg-blue-600" style={{ backgroundColor: 'var(--park-blue)' }}
                                         >
                                             Siguiente →
                                         </button>
