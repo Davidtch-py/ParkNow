@@ -259,6 +259,7 @@ const Entrada = sequelize.define('Entrada', {
   underscored: true
 });
 
+<<<<<<< Updated upstream
 const Salida = sequelize.define('Salida', {
   id: {
     type: DataTypes.INTEGER,
@@ -300,6 +301,12 @@ const Salida = sequelize.define('Salida', {
   timestamps: true,
   underscored: true
 });
+=======
+// Añadir método de dominio a Parqueadero
+Parqueadero.prototype.puedeRecibirVehiculo = function () {
+  return (this.capacidadDisponible || 0) > 0;
+};
+>>>>>>> Stashed changes
 
 // Definir asociaciones
 Parqueadero.hasMany(Tarifa, { foreignKey: 'parqueaderoId' });
@@ -377,6 +384,99 @@ Espacio.belongsTo(Parqueadero, { foreignKey: 'parqueaderoId', as: 'parqueadero' 
 Vehiculo.hasMany(Espacio, { foreignKey: 'vehiculoId', as: 'espaciosOcupados' });
 Espacio.belongsTo(Vehiculo, { foreignKey: 'vehiculoId', as: 'vehiculo' });
 
+// Definición del modelo Reporte
+const Reporte = sequelize.define('Reporte', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  tipo: {
+    type: DataTypes.ENUM('diario', 'semanal', 'mensual', 'personalizado'),
+    allowNull: false,
+    defaultValue: 'personalizado'
+  },
+  titulo: {
+    type: DataTypes.STRING(200),
+    allowNull: false
+  },
+  descripcion: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  fechaInicio: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    field: 'fecha_inicio'
+  },
+  fechaFin: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    field: 'fecha_fin'
+  },
+  parqueaderoId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'parqueadero_id',
+    references: {
+      model: Parqueadero,
+      key: 'id'
+    }
+  },
+  parqueaderoNombre: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'parqueadero_nombre'
+  },
+  controlador: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  totalVehiculos: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: 'total_vehiculos'
+  },
+  totalIngresos: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0,
+    field: 'total_ingresos'
+  },
+  tiempoPromedioEstadia: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0,
+    field: 'tiempo_promedio_estadia'
+  },
+  vehiculosPorTipo: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: { carros: 0, motos: 0, bicicletas: 0 },
+    field: 'vehiculos_por_tipo'
+  },
+  fechaGeneracion: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
+    field: 'fecha_generacion'
+  },
+  estado: {
+    type: DataTypes.ENUM('generado', 'enviado', 'descargado'),
+    allowNull: false,
+    defaultValue: 'generado'
+  }
+}, {
+  tableName: 'reportes',
+  timestamps: true,
+  underscored: true
+});
+
+// Relaciones de Reporte
+Parqueadero.hasMany(Reporte, { foreignKey: 'parqueadero_id', as: 'reportes' });
+Reporte.belongsTo(Parqueadero, { foreignKey: 'parqueadero_id', as: 'parqueadero' });
+
 export {
   sequelize,
   Usuario,
@@ -384,7 +484,13 @@ export {
   Vehiculo,
   Tarifa,
   Horario,
+<<<<<<< Updated upstream
   Entrada,
   Salida,
   Espacio
+=======
+  Espacio,
+  Registro,
+  Reporte
+>>>>>>> Stashed changes
 };

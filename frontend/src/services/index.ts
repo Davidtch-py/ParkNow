@@ -4,17 +4,17 @@ export const authService = {
   async login(email: string, password: string) {
     console.log('🚀 [authService] Iniciando login para:', email);
     console.log('🚀 [authService] Datos a enviar:', { email, password: '***' });
-    
+
     try {
       console.log('🔄 [authService] Enviando petición POST a:', '/auth/login');
       console.log('🔄 [authService] URL completa esperada:', 'http://localhost:3000/api/auth/login');
-      
+
       const response = await api.post('/auth/login', { email, password });
-      
+
       console.log('📡 [authService] Respuesta completa recibida:', response);
       console.log('📄 [authService] Data de la respuesta:', response.data);
       console.log('📊 [authService] Status de la respuesta:', response.status);
-      
+
       if (response.data.success) {
         console.log('✅ [authService] Login exitoso, guardando datos...');
         localStorage.setItem('token', response.data.token);
@@ -23,13 +23,13 @@ export const authService = {
       } else {
         console.log('❌ [authService] Login falló según response.data.success');
       }
-      
+
       return response.data;
     } catch (error: any) {
       console.error('💥 [authService] Error capturado:', error);
       console.error('💥 [authService] Tipo de error:', error.constructor.name);
       console.error('💥 [authService] Stack trace:', error.stack);
-      
+
       // Si hay respuesta del servidor pero con error (4xx, 5xx)
       if (error.response) {
         console.log('🔍 [authService] Error con respuesta del servidor:', {
@@ -37,14 +37,14 @@ export const authService = {
           statusText: error.response.statusText,
           data: error.response.data
         });
-        
+
         // Retornar el error exacto del backend
         return {
           success: false,
           error: error.response.data?.error || `Error del servidor: ${error.response.status}`
         };
       }
-      
+
       // Si es un error de petición (request) - no hay respuesta
       if (error.request) {
         console.log('📤 [authService] Error de petición (sin respuesta del servidor)');
@@ -53,7 +53,7 @@ export const authService = {
           error: 'No se pudo conectar al servidor. Verifica que el backend esté corriendo en puerto 3000.'
         };
       }
-      
+
       // Error de configuración u otro
       console.log('⚙️ [authService] Error de configuración:', error.message);
       return {
@@ -77,7 +77,7 @@ export const authService = {
     // Limpiar datos de sesión
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    
+
     // NO usar window.location.href - dejar que React Router maneje la navegación
     console.log('Sesión cerrada correctamente');
   },
@@ -164,16 +164,26 @@ export const salidaService = {
 };
 
 export const reporteService = {
+  async crear(reporteData: any) {
+    const response = await api.post('/reportes', reporteData);
+    return response.data;
+  },
+
+  async getAll() {
+    const response = await api.get('/reportes');
+    return response.data;
+  },
+
   async generarPorFecha(fechaInicio: Date, fechaFin: Date, parqueaderoId: string | null = null) {
     const params = new URLSearchParams({
       fechaInicio: fechaInicio.toISOString().split('T')[0],
       fechaFin: fechaFin.toISOString().split('T')[0]
     });
-    
+
     if (parqueaderoId) {
       params.append('parqueaderoId', parqueaderoId);
     }
-    
+
     const response = await api.get(`/reportes/fecha?${params}`);
     return response.data;
   },
@@ -184,11 +194,11 @@ export const reporteService = {
       fechaInicio: fechaInicio.toISOString().split('T')[0],
       fechaFin: fechaFin.toISOString().split('T')[0]
     });
-    
+
     if (parqueaderoId) {
       params.append('parqueaderoId', parqueaderoId);
     }
-    
+
     const response = await api.get(`/reportes/tipo-vehiculo?${params}`);
     return response.data;
   },
@@ -199,9 +209,16 @@ export const reporteService = {
       fechaInicio: fechaInicio.toISOString().split('T')[0],
       fechaFin: fechaFin.toISOString().split('T')[0]
     });
-    
+
     const response = await api.get(`/reportes/controlador?${params}`);
     return response.data;
+  },
+
+  async descargar(id: number) {
+    const response = await api.get(`/reportes/${id}/pdf`, {
+      responseType: 'blob'
+    });
+    return response;
   }
 };
 
@@ -327,9 +344,7 @@ export const usuarioService = {
   async delete(id: string | number) {
     const response = await api.delete(`/usuarios/${id}`);
     return response.data;
-  },
-
-
+  }
 };
 
 export const horarioService = {

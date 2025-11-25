@@ -39,12 +39,12 @@ app.use(cors({
   origin: function (origin, callback) {
     // Permitir requests sin origin (como Postman, Thunder Client, etc.)
     if (!origin) return callback(null, true);
-    
+
     // En desarrollo, permitir cualquier origen
     if (process.env.NODE_ENV === 'development') {
       return callback(null, true);
     }
-    
+
     // En producción, verificar lista de orígenes permitidos
     if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
       callback(null, true);
@@ -84,6 +84,60 @@ app.get('/api/test/db', async (req, res) => {
   }
 });
 
+<<<<<<< Updated upstream
+=======
+// Ruta de debug para verificar entradas por parqueadero
+app.get('/api/test/debug/entradas/:parqueaderoId', async (req, res) => {
+  try {
+    const { parqueaderoId } = req.params;
+
+    // Verificar espacios del parqueadero
+    const espacios = await sequelize.query(
+      'SELECT * FROM espacios WHERE id_parqueadero = ?',
+      { replacements: [parqueaderoId], type: sequelize.QueryTypes.SELECT }
+    );
+
+    // Verificar registros activos
+    const registros = await sequelize.query(
+      `SELECT r.id, r.id_vehiculo, r.id_espacio, r.id_usuario, r.fecha_ingreso, r.fecha_salida,
+              v.placa, v.tipo, e.id_parqueadero, e.codigo_espacio
+       FROM registros r
+       LEFT JOIN vehiculos v ON r.id_vehiculo = v.id
+       LEFT JOIN espacios e ON r.id_espacio = e.id
+       WHERE r.fecha_salida IS NULL`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+
+    // Verificar registros con espacios de este parqueadero
+    const registrosDelParqueadero = await sequelize.query(
+      `SELECT r.id, r.id_vehiculo, r.id_espacio, r.id_usuario, r.fecha_ingreso, r.fecha_salida,
+              v.placa, v.tipo, e.id_parqueadero, e.codigo_espacio
+       FROM registros r
+       LEFT JOIN vehiculos v ON r.id_vehiculo = v.id
+       LEFT JOIN espacios e ON r.id_espacio = e.id
+       WHERE r.fecha_salida IS NULL AND e.id_parqueadero = ?`,
+      { replacements: [parqueaderoId], type: sequelize.QueryTypes.SELECT }
+    );
+
+    res.json({
+      success: true,
+      parqueaderoId,
+      espacios,
+      totalEspacios: espacios.length,
+      registrosActivos: registros,
+      totalRegistrosActivos: registros.length,
+      registrosDelParqueadero,
+      totalRegistrosDelParqueadero: registrosDelParqueadero.length
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+>>>>>>> Stashed changes
 // Instanciar controladores
 const authController = new AuthController();
 const parqueaderoController = new ParqueaderoController();
@@ -99,7 +153,7 @@ const notificacionController = new NotificacionController();
 
 // Health check endpoint para Render
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString()
   });
@@ -154,6 +208,8 @@ app.get('/api/salidas', authMiddleware, salidaController.obtenerTodas.bind(salid
 app.get('/api/salidas/:id', authMiddleware, salidaController.obtenerPorId.bind(salidaController));
 
 // Rutas de reportes
+app.get('/api/reportes', authMiddleware, adminMiddleware, reporteController.obtenerTodos.bind(reporteController));
+app.post('/api/reportes', authMiddleware, adminMiddleware, reporteController.crear.bind(reporteController));
 app.get('/api/reportes/fecha', authMiddleware, reporteController.generarPorFecha.bind(reporteController));
 app.get('/api/reportes/tipo-vehiculo', authMiddleware, reporteController.generarPorTipoVehiculo.bind(reporteController));
 app.get('/api/reportes/controlador', authMiddleware, reporteController.generarPorControlador.bind(reporteController));
@@ -335,11 +391,11 @@ async function initializeDatabase() {
   try {
     await sequelize.authenticate();
     console.log('✅ Conexión a la base de datos establecida correctamente.');
-    
+
     // Sincronizar modelos (recrear tablas para resolver problemas de enum)
     await sequelize.sync({ force: true });
     console.log('📊 Tablas sincronizadas correctamente.');
-    
+
     // Verificar si hay datos, si no, insertar datos de prueba
     const userCount = await sequelize.models.Usuario.count();
     if (userCount === 0) {
@@ -358,12 +414,21 @@ async function initializeDatabase() {
 async function startServer() {
   try {
     await initializeDatabase();
+<<<<<<< Updated upstream
     
     // Inicializar broker MQTT
     const mqttPort = process.env.MQTT_PORT || 1883;
     const mqttWsPort = process.env.MQTT_WS_PORT || 8883;
     mqttService.initialize(mqttPort, mqttWsPort);
     
+=======
+
+    // Inicializar broker MQTT (temporalmente deshabilitado)
+    // const mqttPort = process.env.MQTT_PORT || 1883;
+    // const mqttWsPort = process.env.MQTT_WS_PORT || 8883;
+    // mqttService.initialize(mqttPort, mqttWsPort);
+
+>>>>>>> Stashed changes
     app.listen(PORT, () => {
       console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
       console.log(`🌐 API disponible en: http://localhost:${PORT}`);

@@ -72,7 +72,7 @@ const ReportesListView = () => {
   const aplicarFiltros = useCallback(() => {
     let resultado = reportes;
     if (busqueda) {
-      resultado = resultado.filter(r => 
+      resultado = resultado.filter(r =>
         r.titulo.toLowerCase().includes(busqueda.toLowerCase()) ||
         r.descripcion?.toLowerCase().includes(busqueda.toLowerCase())
       );
@@ -98,72 +98,14 @@ const ReportesListView = () => {
         setParqueaderos(parqueaderosResult.parqueaderos);
       }
 
-      // Simular carga de reportes existentes
-      const reportesMock: Reporte[] = [
-        {
-          id: 1,
-          tipo: 'diario',
-          titulo: 'Reporte Diario - 15 Enero 2024',
-          fechaInicio: '2024-01-15',
-          fechaFin: '2024-01-15',
-          parqueaderoId: 1,
-          parqueaderoNombre: 'Parqueadero Central',
-          controlador: 'Juan Pérez',
-          totalVehiculos: 245,
-          totalIngresos: 1250000,
-          tiempoPromedioEstadia: 2.5,
-          vehiculosPorTipo: { carros: 147, motos: 73, bicicletas: 25 },
-          fechaGeneracion: '2024-01-15T23:30:00Z',
-          estado: 'generado'
-        },
-        {
-          id: 2,
-          tipo: 'semanal',
-          titulo: 'Reporte Semanal - 8-14 Enero 2024',
-          fechaInicio: '2024-01-08',
-          fechaFin: '2024-01-14',
-          parqueaderoNombre: 'Todos los parqueaderos',
-          totalVehiculos: 1680,
-          totalIngresos: 8750000,
-          tiempoPromedioEstadia: 2.8,
-          vehiculosPorTipo: { carros: 1008, motos: 504, bicicletas: 168 },
-          fechaGeneracion: '2024-01-14T23:59:00Z',
-          estado: 'descargado'
-        },
-        {
-          id: 3,
-          tipo: 'mensual',
-          titulo: 'Reporte Mensual - Diciembre 2023',
-          fechaInicio: '2023-12-01',
-          fechaFin: '2023-12-31',
-          parqueaderoId: 2,
-          parqueaderoNombre: 'Plaza Norte',
-          controlador: 'María García',
-          totalVehiculos: 3450,
-          totalIngresos: 18500000,
-          tiempoPromedioEstadia: 3.1,
-          vehiculosPorTipo: { carros: 2070, motos: 1035, bicicletas: 345 },
-          fechaGeneracion: '2024-01-01T00:30:00Z',
-          estado: 'enviado'
-        },
-        {
-          id: 4,
-          tipo: 'personalizado',
-          titulo: 'Reporte Fin de Año 2023',
-          fechaInicio: '2023-12-20',
-          fechaFin: '2023-12-31',
-          parqueaderoNombre: 'Todos los parqueaderos',
-          totalVehiculos: 2890,
-          totalIngresos: 15400000,
-          tiempoPromedioEstadia: 3.5,
-          vehiculosPorTipo: { carros: 1734, motos: 867, bicicletas: 289 },
-          fechaGeneracion: '2024-01-02T10:15:00Z',
-          estado: 'generado'
-        }
-      ];
+      // Cargar reportes reales desde el backend
+      const reportesResult = await reporteService.getAll();
+      if (reportesResult.success) {
+        setReportes(reportesResult.reportes);
+      } else {
+        toast.error('No se pudieron cargar los reportes');
+      }
 
-      setReportes(reportesMock);
-      
     } catch (error) {
       toast.error('Error cargando reportes');
     } finally {
@@ -176,15 +118,23 @@ const ReportesListView = () => {
       setGenerandoReporte(true);
 
       const nuevoReporte = {
-        tipo: filtros.tipoReporte as any || 'personalizado',
+        tipo: filtros.tipoReporte || 'personalizado',
+        titulo: `Reporte ${filtros.tipoReporte || 'personalizado'} - ${filtros.fechaInicio} a ${filtros.fechaFin}`,
+        descripcion: 'Generado desde la interfaz',
         fechaInicio: filtros.fechaInicio,
         fechaFin: filtros.fechaFin,
-        parqueaderoId: filtros.parqueaderoId ? parseInt(filtros.parqueaderoId) : undefined,
-        tipoVehiculo: filtros.tipoVehiculo
+        parqueaderoId: filtros.parqueaderoId ? parseInt(filtros.parqueaderoId) : null,
+        controlador: filtros.controlador || null,
+        totalVehiculos: 0,
+        totalIngresos: 0,
+        tiempoPromedioEstadia: 0,
+        vehiculosPorTipo: { carros: 0, motos: 0, bicicletas: 0 },
+        estado: 'generado'
       };
+      console.log("Nuevo reporte a enviar:", nuevoReporte);
 
-      const result = await reporteService.generarPorFecha(new Date(nuevoReporte.fechaInicio), new Date(nuevoReporte.fechaFin));
-      
+      const result = await reporteService.crear(nuevoReporte);
+
       if (result.success) {
         toast.success('Reporte generado exitosamente');
         cargarDatos(); // Recargar lista de reportes
@@ -201,23 +151,158 @@ const ReportesListView = () => {
 
   const descargarReporte = async (reporte: Reporte) => {
     try {
-      // Simular descarga
-      toast.success(`Descargando reporte: ${reporte.titulo}`);
-      
+      // Crear una ventana temporal para generar el PDF
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast.error('Por favor permite ventanas emergentes para descargar');
+        return;
+      }
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Reporte - ${reporte.titulo}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 40px; color: #333; max-width: 800px; margin: 0 auto; }
+              .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+              .logo { font-size: 28px; font-weight: bold; color: #98cae5; margin-bottom: 10px; }
+              .title { font-size: 24px; margin: 10px 0; color: #1f2937; }
+              .meta { color: #6b7280; font-size: 14px; }
+              .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+              .card { background: #f9fafb; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #e5e7eb; }
+              .card-title { font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+              .card-value { font-size: 28px; font-weight: bold; color: #111827; margin-top: 8px; }
+              .section-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; color: #374151; border-left: 4px solid #98cae5; padding-left: 12px; }
+              .table-container { margin-bottom: 40px; }
+              .table { width: 100%; border-collapse: collapse; }
+              .table th { text-align: left; padding: 12px; background-color: #f3f4f6; color: #374151; font-weight: 600; border-bottom: 2px solid #e5e7eb; }
+              .table td { padding: 12px; border-bottom: 1px solid #e5e7eb; color: #4b5563; }
+              .table tr:last-child td { border-bottom: none; }
+              .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+              .info-item { margin-bottom: 10px; }
+              .info-label { font-weight: 600; color: #374151; display: inline-block; width: 120px; }
+              .info-value { color: #4b5563; }
+              .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #eee; padding-top: 20px; }
+              @media print {
+                body { -webkit-print-color-adjust: exact; padding: 0; }
+                .card { background-color: #f9fafb !important; border: 1px solid #e5e7eb !important; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="logo">ParkNow</div>
+              <h1 class="title">${reporte.titulo}</h1>
+              <div class="meta">
+                Generado el ${formatDate(reporte.fechaGeneracion)}
+              </div>
+            </div>
+
+            <div class="info-grid">
+              <div>
+                <div class="info-item">
+                  <span class="info-label">Periodo:</span>
+                  <span class="info-value">${formatDate(reporte.fechaInicio)} - ${formatDate(reporte.fechaFin)}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Tipo:</span>
+                  <span class="info-value" style="text-transform: capitalize">${reporte.tipo}</span>
+                </div>
+              </div>
+              <div>
+                <div class="info-item">
+                  <span class="info-label">Parqueadero:</span>
+                  <span class="info-value">${reporte.parqueaderoNombre || 'Todos'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Controlador:</span>
+                  <span class="info-value">${reporte.controlador || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title">Resumen General</div>
+            <div class="grid">
+              <div class="card">
+                <div class="card-title">Total Vehículos</div>
+                <div class="card-value">${reporte.totalVehiculos.toLocaleString()}</div>
+              </div>
+              <div class="card">
+                <div class="card-title">Total Ingresos</div>
+                <div class="card-value">${formatCurrency(reporte.totalIngresos)}</div>
+              </div>
+              <div class="card">
+                <div class="card-title">Tiempo Promedio</div>
+                <div class="card-value">${reporte.tiempoPromedioEstadia}h</div>
+              </div>
+            </div>
+
+            <div class="section-title">Detalle por Vehículo</div>
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Tipo de Vehículo</th>
+                    <th>Cantidad</th>
+                    <th>Porcentaje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Carros</td>
+                    <td>${reporte.vehiculosPorTipo.carros}</td>
+                    <td>${reporte.totalVehiculos > 0 ? Math.round((reporte.vehiculosPorTipo.carros / reporte.totalVehiculos) * 100) : 0}%</td>
+                  </tr>
+                  <tr>
+                    <td>Motos</td>
+                    <td>${reporte.vehiculosPorTipo.motos}</td>
+                    <td>${reporte.totalVehiculos > 0 ? Math.round((reporte.vehiculosPorTipo.motos / reporte.totalVehiculos) * 100) : 0}%</td>
+                  </tr>
+                  <tr>
+                    <td>Bicicletas</td>
+                    <td>${reporte.vehiculosPorTipo.bicicletas}</td>
+                    <td>${reporte.totalVehiculos > 0 ? Math.round((reporte.vehiculosPorTipo.bicicletas / reporte.totalVehiculos) * 100) : 0}%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="footer">
+              <p>Este documento es un reporte generado automáticamente por el sistema de gestión ParkNow.</p>
+              <p>Fecha de generación: ${new Date().toLocaleString('es-CO')}</p>
+            </div>
+
+            <script>
+              window.onload = function() {
+                // Esperar a que el contenido se cargue completamente
+                setTimeout(function() {
+                  // Abrir el diálogo de impresión con opción de guardar como PDF
+                  window.print();
+                  
+                  // Cerrar la ventana después de que el usuario termine con el diálogo
+                  setTimeout(function() {
+                    window.close();
+                  }, 100);
+                }, 500);
+              }
+            </script>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+
       // Actualizar estado del reporte
-      const reportesActualizados = reportes.map(r => 
+      const reportesActualizados = reportes.map(r =>
         r.id === reporte.id ? { ...r, estado: 'descargado' as const } : r
       );
       setReportes(reportesActualizados);
-
     } catch (error) {
+      console.error('Error descargando reporte:', error);
       toast.error('Error al descargar reporte');
     }
-  };
-
-  const imprimirReporte = (reporte: Reporte) => {
-    // Simular impresión
-    toast.info(`Enviando a imprimir: ${reporte.titulo}`);
   };
 
   const getEstadoColor = (estado: string) => {
@@ -279,7 +364,7 @@ const ReportesListView = () => {
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Generar Nuevo Reporte</h3>
             </div>
-            
+
             <div className="p-6 space-y-4">
               {/* Búsqueda */}
               <div>
@@ -308,7 +393,7 @@ const ReportesListView = () => {
                     type="date"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={filtros.fechaInicio}
-                    onChange={(e) => setFiltros({...filtros, fechaInicio: e.target.value})}
+                    onChange={(e) => setFiltros({ ...filtros, fechaInicio: e.target.value })}
                   />
                 </div>
                 <div>
@@ -319,7 +404,7 @@ const ReportesListView = () => {
                     type="date"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={filtros.fechaFin}
-                    onChange={(e) => setFiltros({...filtros, fechaFin: e.target.value})}
+                    onChange={(e) => setFiltros({ ...filtros, fechaFin: e.target.value })}
                   />
                 </div>
               </div>
@@ -332,7 +417,7 @@ const ReportesListView = () => {
                 <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={filtros.tipoReporte}
-                  onChange={(e) => setFiltros({...filtros, tipoReporte: e.target.value})}
+                  onChange={(e) => setFiltros({ ...filtros, tipoReporte: e.target.value })}
                 >
                   <option value="todos">Todos los tipos</option>
                   <option value="diario">Diario</option>
@@ -350,7 +435,7 @@ const ReportesListView = () => {
                 <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={filtros.parqueaderoId}
-                  onChange={(e) => setFiltros({...filtros, parqueaderoId: e.target.value})}
+                  onChange={(e) => setFiltros({ ...filtros, parqueaderoId: e.target.value })}
                 >
                   <option value="">Todos los parqueaderos</option>
                   {parqueaderos.map((parqueadero) => (
@@ -361,20 +446,6 @@ const ReportesListView = () => {
                 </select>
               </div>
 
-              {/* Controlador */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Controlador
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nombre del controlador"
-                  value={filtros.controlador}
-                  onChange={(e) => setFiltros({...filtros, controlador: e.target.value})}
-                />
-              </div>
-
               {/* Tipo de vehículo */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -383,7 +454,7 @@ const ReportesListView = () => {
                 <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={filtros.tipoVehiculo}
-                  onChange={(e) => setFiltros({...filtros, tipoVehiculo: e.target.value})}
+                  onChange={(e) => setFiltros({ ...filtros, tipoVehiculo: e.target.value })}
                 >
                   <option value="">Todos los tipos</option>
                   <option value="carro">Carros</option>
@@ -396,7 +467,7 @@ const ReportesListView = () => {
               <button
                 onClick={generarNuevoReporte}
                 disabled={generandoReporte}
-                className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center px-4 py-2 text-black font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" style={{ backgroundColor: "var(--park-blue)" }}
               >
                 {generandoReporte ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -422,7 +493,7 @@ const ReportesListView = () => {
                 </span>
               </div>
             </div>
-            
+
             <div className="divide-y divide-gray-200">
               {loading ? (
                 <div className="p-8 text-center">
@@ -443,7 +514,7 @@ const ReportesListView = () => {
                             {reporte.estado}
                           </span>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
                           <div className="flex items-center space-x-2">
                             <Calendar className="h-4 w-4 text-gray-400" />
@@ -454,7 +525,7 @@ const ReportesListView = () => {
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center space-x-2">
                             <Car className="h-4 w-4 text-gray-400" />
                             <div>
@@ -462,7 +533,7 @@ const ReportesListView = () => {
                               <div className="text-sm font-medium">{reporte.totalVehiculos.toLocaleString()}</div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center space-x-2">
                             <DollarSign className="h-4 w-4 text-gray-400" />
                             <div>
@@ -470,7 +541,7 @@ const ReportesListView = () => {
                               <div className="text-sm font-medium">{formatCurrency(reporte.totalIngresos)}</div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center space-x-2">
                             <Clock className="h-4 w-4 text-gray-400" />
                             <div>
@@ -479,7 +550,7 @@ const ReportesListView = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           {reporte.parqueaderoNombre && (
                             <div className="flex items-center space-x-1">
@@ -498,7 +569,7 @@ const ReportesListView = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2 ml-4">
                         <button
                           onClick={() => {
@@ -509,13 +580,6 @@ const ReportesListView = () => {
                           title="Ver detalle"
                         >
                           <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => imprimirReporte(reporte)}
-                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                          title="Imprimir"
-                        >
-                          <Printer className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => descargarReporte(reporte)}
@@ -555,7 +619,7 @@ const ReportesListView = () => {
                 <X className="h-6 w-6" />
               </button>
             </div>
-            
+
             {/* Contenido del reporte detallado */}
             <div className="space-y-6">
               {/* Header del reporte */}
@@ -584,7 +648,7 @@ const ReportesListView = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Métricas principales */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-blue-50 rounded-lg p-4">
@@ -598,7 +662,7 @@ const ReportesListView = () => {
                     <Car className="h-8 w-8 text-blue-600" />
                   </div>
                 </div>
-                
+
                 <div className="bg-green-50 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -610,7 +674,7 @@ const ReportesListView = () => {
                     <DollarSign className="h-8 w-8 text-green-600" />
                   </div>
                 </div>
-                
+
                 <div className="bg-orange-50 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -623,7 +687,7 @@ const ReportesListView = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Distribución por tipo de vehículo */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <h5 className="text-lg font-medium text-gray-900 mb-4">

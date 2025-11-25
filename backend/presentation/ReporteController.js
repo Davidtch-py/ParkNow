@@ -3,11 +3,13 @@ import { EntradaRepository } from '../persistence/EntradaRepository.js';
 import { SalidaRepository } from '../persistence/SalidaRepository.js';
 import { VehiculoRepository } from '../persistence/VehiculoRepository.js';
 import { UsuarioRepository } from '../persistence/UsuarioRepository.js';
+import { ReportesRepository } from '../persistence/ReportesRepository.js';
 
 const entradaRepository = new EntradaRepository();
 const salidaRepository = new SalidaRepository();
 const vehiculoRepository = new VehiculoRepository();
 const usuarioRepository = new UsuarioRepository();
+const reportesRepository = new ReportesRepository();
 
 const reporteUseCase = new ReporteUseCase(
   entradaRepository,
@@ -17,6 +19,38 @@ const reporteUseCase = new ReporteUseCase(
 );
 
 export class ReporteController {
+
+  async crear(req, res) {
+    try {
+      console.log("HOLSA DJSKJDKLA");
+      console.log("Body recibido en crear:", req.body);
+      console.log("CHAO PSD");
+      const nuevoReporte = await Reporte.create(req.body);
+      res.json({ success: true, reporte: nuevoReporte });
+    } catch (error) {
+      console.error('Error creando reporte:', error);
+      res.status(500).json({ success: false, error: 'Error interno del servidor' });
+    }
+
+  }
+
+  async obtenerTodos(req, res) {
+    try {
+      const reportes = await reportesRepository.findAll();
+      console.log("Reportes encontrados:", reportes); // <-- debug
+      res.json({
+        success: true,
+        reportes
+      });
+    } catch (error) {
+      console.error('Error en obtenerTodos:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor'
+      });
+    }
+  }
+
   async generarPorFecha(req, res) {
     try {
       const { fechaInicio, fechaFin, parqueaderoId } = req.query;
