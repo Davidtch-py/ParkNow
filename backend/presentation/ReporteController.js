@@ -1,4 +1,5 @@
 import { ReporteUseCase } from '../application/ReporteUseCase.js';
+import { ReporteConPersistenciaUseCase } from '../application/ReporteConPersistenciaUseCase.js';
 import { EntradaRepository } from '../persistence/EntradaRepository.js';
 import { SalidaRepository } from '../persistence/SalidaRepository.js';
 import { VehiculoRepository } from '../persistence/VehiculoRepository.js';
@@ -15,6 +16,8 @@ const reporteUseCase = new ReporteUseCase(
   vehiculoRepository,
   usuarioRepository
 );
+
+const reporteConPersistenciaUseCase = new ReporteConPersistenciaUseCase(salidaRepository);
 
 export class ReporteController {
   async generarPorFecha(req, res) {
@@ -183,6 +186,161 @@ export class ReporteController {
         success: false,
         error: 'Error interno del servidor',
         tiempoPromedioEstadia: 0
+      });
+    }
+  }
+
+  // ========== NUEVOS MÉTODOS CON PERSISTENCIA ==========
+
+  async generarYGuardarReporte(req, res) {
+    try {
+      const filtros = req.body;
+
+      if (!filtros.fechaInicio || !filtros.fechaFin) {
+        return res.status(400).json({
+          success: false,
+          error: 'Fecha de inicio y fin son requeridas'
+        });
+      }
+
+      const result = await reporteConPersistenciaUseCase.generarYGuardarReporte(filtros);
+      
+      if (result.success) {
+        res.status(201).json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error('[ERROR] Error generando y guardando reporte:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor'
+      });
+    }
+  }
+
+  async obtenerReportesGuardados(req, res) {
+    try {
+      const { limit = 50, offset = 0 } = req.query;
+      
+      const result = await reporteConPersistenciaUseCase.obtenerReportesGuardados(
+        parseInt(limit),
+        parseInt(offset)
+      );
+      
+      res.json(result);
+    } catch (error) {
+      console.error('[ERROR] Error obteniendo reportes guardados:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor'
+      });
+    }
+  }
+
+  async obtenerReportePorId(req, res) {
+    try {
+      const { id } = req.params;
+      
+      const result = await reporteConPersistenciaUseCase.obtenerReportePorId(parseInt(id));
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(404).json(result);
+      }
+    } catch (error) {
+      console.error('[ERROR] Error obteniendo reporte por ID:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor'
+      });
+    }
+  }
+
+  async obtenerReportesRecientes(req, res) {
+    try {
+      const { limit = 10 } = req.query;
+      
+      const result = await reporteConPersistenciaUseCase.obtenerReportesRecientes(parseInt(limit));
+      
+      res.json(result);
+    } catch (error) {
+      console.error('[ERROR] Error obteniendo reportes recientes:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor'
+      });
+    }
+  }
+
+  async obtenerReportesPorParqueadero(req, res) {
+    try {
+      const { parqueaderoId } = req.params;
+      const { limit = 20 } = req.query;
+      
+      const result = await reporteConPersistenciaUseCase.obtenerReportesPorParqueadero(
+        parseInt(parqueaderoId),
+        parseInt(limit)
+      );
+      
+      res.json(result);
+    } catch (error) {
+      console.error('[ERROR] Error obteniendo reportes por parqueadero:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor'
+      });
+    }
+  }
+
+  async actualizarEstadoReporte(req, res) {
+    try {
+      const { id } = req.params;
+      const { estado } = req.body;
+      
+      if (!estado) {
+        return res.status(400).json({
+          success: false,
+          error: 'Estado es requerido'
+        });
+      }
+      
+      const result = await reporteConPersistenciaUseCase.actualizarEstadoReporte(
+        parseInt(id),
+        estado
+      );
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(404).json(result);
+      }
+    } catch (error) {
+      console.error('[ERROR] Error actualizando estado de reporte:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor'
+      });
+    }
+  }
+
+  async eliminarReporte(req, res) {
+    try {
+      const { id } = req.params;
+      
+      const result = await reporteConPersistenciaUseCase.eliminarReporte(parseInt(id));
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(404).json(result);
+      }
+    } catch (error) {
+      console.error('[ERROR] Error eliminando reporte:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor'
       });
     }
   }

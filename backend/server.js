@@ -220,12 +220,24 @@ app.post('/api/salidas', authMiddleware, salidaController.registrar.bind(salidaC
 app.get('/api/salidas', authMiddleware, salidaController.obtenerTodas.bind(salidaController));
 app.get('/api/salidas/:id', authMiddleware, salidaController.obtenerPorId.bind(salidaController));
 
-// Rutas de reportes
+// Rutas de reportes - IMPORTANTE: Rutas específicas PRIMERO, luego las genéricas
+// Rutas sin persistencia (estadísticas en tiempo real)
 app.get('/api/reportes/estadisticas-dashboard', authMiddleware, reporteController.obtenerEstadisticasDashboard.bind(reporteController));
 app.get('/api/reportes/ingresos-diarios', authMiddleware, reporteController.obtenerIngresosDiarios.bind(reporteController));
 app.get('/api/reportes/fecha', authMiddleware, reporteController.generarPorFecha.bind(reporteController));
 app.get('/api/reportes/tipo-vehiculo', authMiddleware, reporteController.generarPorTipoVehiculo.bind(reporteController));
 app.get('/api/reportes/controlador', authMiddleware, reporteController.generarPorControlador.bind(reporteController));
+
+// Rutas con persistencia - Específicas primero
+app.get('/api/reportes/recientes', authMiddleware, reporteController.obtenerReportesRecientes.bind(reporteController));
+app.get('/api/reportes/parqueadero/:parqueaderoId', authMiddleware, reporteController.obtenerReportesPorParqueadero.bind(reporteController));
+
+// Rutas CRUD con persistencia
+app.post('/api/reportes', authMiddleware, reporteController.generarYGuardarReporte.bind(reporteController));
+app.get('/api/reportes', authMiddleware, reporteController.obtenerReportesGuardados.bind(reporteController));
+app.get('/api/reportes/:id', authMiddleware, reporteController.obtenerReportePorId.bind(reporteController));
+app.put('/api/reportes/:id/estado', authMiddleware, reporteController.actualizarEstadoReporte.bind(reporteController));
+app.delete('/api/reportes/:id', authMiddleware, adminMiddleware, reporteController.eliminarReporte.bind(reporteController));
 
 // Rutas de tarifas
 app.get('/api/tarifas', authMiddleware, tarifaController.obtenerTodas.bind(tarifaController));

@@ -318,6 +318,91 @@ const Espacio = sequelize.define('Espacio', {
   underscored: true
 });
 
+// Modelo de Reporte
+const Reporte = sequelize.define('Reporte', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  tipo: {
+    type: DataTypes.ENUM('diario', 'semanal', 'mensual', 'personalizado'),
+    allowNull: false,
+    defaultValue: 'personalizado'
+  },
+  titulo: {
+    type: DataTypes.STRING(255),
+    allowNull: false
+  },
+  fechaInicio: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    field: 'fecha_inicio'
+  },
+  fechaFin: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    field: 'fecha_fin'
+  },
+  parqueaderoId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'parqueadero_id',
+    references: {
+      model: Parqueadero,
+      key: 'id'
+    }
+  },
+  parqueaderoNombre: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'parqueadero_nombre'
+  },
+  controlador: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  totalVehiculos: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    field: 'total_vehiculos'
+  },
+  totalIngresos: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0,
+    field: 'total_ingresos'
+  },
+  tiempoPromedioEstadia: {
+    type: DataTypes.DECIMAL(5, 2),
+    allowNull: false,
+    defaultValue: 0,
+    field: 'tiempo_promedio_estadia'
+  },
+  vehiculosPorTipo: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: { carros: 0, motos: 0, bicicletas: 0 },
+    field: 'vehiculos_por_tipo'
+  },
+  fechaGeneracion: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
+    field: 'fecha_generacion'
+  },
+  estado: {
+    type: DataTypes.ENUM('generado', 'enviado', 'descargado'),
+    allowNull: false,
+    defaultValue: 'generado'
+  }
+}, {
+  tableName: 'reportes',
+  timestamps: true,
+  underscored: true
+});
+
 // Agregar asociaciones para Espacio
 Parqueadero.hasMany(Espacio, { foreignKey: 'id_parqueadero', as: 'espacios' });
 Espacio.belongsTo(Parqueadero, { foreignKey: 'id_parqueadero', as: 'parqueadero' });
@@ -325,6 +410,10 @@ Espacio.belongsTo(Parqueadero, { foreignKey: 'id_parqueadero', as: 'parqueadero'
 // Registro se relaciona con Espacio
 Espacio.hasMany(Registro, { foreignKey: 'id_espacio', as: 'registros' });
 Registro.belongsTo(Espacio, { foreignKey: 'id_espacio', as: 'espacio' });
+
+// Reporte se relaciona con Parqueadero
+Parqueadero.hasMany(Reporte, { foreignKey: 'parqueadero_id', as: 'reportes' });
+Reporte.belongsTo(Parqueadero, { foreignKey: 'parqueadero_id', as: 'parqueadero' });
 
 export {
   sequelize,
@@ -334,5 +423,6 @@ export {
   Tarifa,
   Horario,
   Espacio,
-  Registro
+  Registro,
+  Reporte
 };

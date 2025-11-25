@@ -293,6 +293,43 @@ export const reporteService = {
     
     const response = await api.get(`/reportes/controlador?${params}`);
     return response.data;
+  },
+
+  // ========== MÉTODOS CON PERSISTENCIA ==========
+
+  async generarYGuardarReporte(filtros: any) {
+    const response = await api.post('/reportes', filtros);
+    return response.data;
+  },
+
+  async obtenerReportesGuardados(limit: number = 50, offset: number = 0) {
+    const response = await api.get(`/reportes?limit=${limit}&offset=${offset}`);
+    return response.data;
+  },
+
+  async obtenerReportePorId(id: string | number) {
+    const response = await api.get(`/reportes/${id}`);
+    return response.data;
+  },
+
+  async obtenerReportesRecientes(limit: number = 10) {
+    const response = await api.get(`/reportes/recientes?limit=${limit}`);
+    return response.data;
+  },
+
+  async obtenerReportesPorParqueadero(parqueaderoId: string | number, limit: number = 20) {
+    const response = await api.get(`/reportes/parqueadero/${parqueaderoId}?limit=${limit}`);
+    return response.data;
+  },
+
+  async actualizarEstadoReporte(id: string | number, estado: string) {
+    const response = await api.put(`/reportes/${id}/estado`, { estado });
+    return response.data;
+  },
+
+  async eliminarReporte(id: string | number) {
+    const response = await api.delete(`/reportes/${id}`);
+    return response.data;
   }
 };
 

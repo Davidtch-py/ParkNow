@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Download,
   FileText,
   Calendar,
   Car,
@@ -13,8 +12,10 @@ import {
   Printer,
   X
 } from 'lucide-react';
-import { reporteService, parqueaderoService } from '../services/index';
+import { reporteService, parqueaderoService, salidaService } from '../services/index';
 import { toast } from 'react-toastify';
+import ReporteImprimible from '../components/ReporteImprimible';
+import VistaReporteModal from '../components/VistaReporteModal';
 
 interface Reporte {
   id: number;
@@ -54,7 +55,9 @@ const ReportesListView = () => {
   const [loading, setLoading] = useState(false);
   const [reporteSeleccionado, setReporteSeleccionado] = useState<Reporte | null>(null);
   const [mostrarDetalle, setMostrarDetalle] = useState(false);
+  const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false);
   const [generandoReporte, setGenerandoReporte] = useState(false);
+  const reporteImprimibleRef = useRef<HTMLDivElement>(null);
 
   // const { user } = useAuth();
 
@@ -98,74 +101,14 @@ const ReportesListView = () => {
         setParqueaderos(parqueaderosResult.parqueaderos);
       }
 
-      // Simular carga de reportes existentes
-      const reportesMock: Reporte[] = [
-        {
-          id: 1,
-          tipo: 'diario',
-          titulo: 'Reporte Diario - 15 Enero 2024',
-          fechaInicio: '2024-01-15',
-          fechaFin: '2024-01-15',
-          parqueaderoId: 1,
-          parqueaderoNombre: 'Parqueadero Central',
-          controlador: 'Juan Pérez',
-          totalVehiculos: 245,
-          totalIngresos: 1250000,
-          tiempoPromedioEstadia: 2.5,
-          vehiculosPorTipo: { carros: 147, motos: 73, bicicletas: 25 },
-          fechaGeneracion: '2024-01-15T23:30:00Z',
-          estado: 'generado'
-        },
-        {
-          id: 2,
-          tipo: 'semanal',
-          titulo: 'Reporte Semanal - 8-14 Enero 2024',
-          fechaInicio: '2024-01-08',
-          fechaFin: '2024-01-14',
-          parqueaderoNombre: 'Todos los parqueaderos',
-          totalVehiculos: 1680,
-          totalIngresos: 8750000,
-          tiempoPromedioEstadia: 2.8,
-          vehiculosPorTipo: { carros: 1008, motos: 504, bicicletas: 168 },
-          fechaGeneracion: '2024-01-14T23:59:00Z',
-          estado: 'descargado'
-        },
-        {
-          id: 3,
-          tipo: 'mensual',
-          titulo: 'Reporte Mensual - Diciembre 2023',
-          fechaInicio: '2023-12-01',
-          fechaFin: '2023-12-31',
-          parqueaderoId: 2,
-          parqueaderoNombre: 'Plaza Norte',
-          controlador: 'María García',
-          totalVehiculos: 3450,
-          totalIngresos: 18500000,
-          tiempoPromedioEstadia: 3.1,
-          vehiculosPorTipo: { carros: 2070, motos: 1035, bicicletas: 345 },
-          fechaGeneracion: '2024-01-01T00:30:00Z',
-          estado: 'enviado'
-        },
-        {
-          id: 4,
-          tipo: 'personalizado',
-          titulo: 'Reporte Fin de Año 2023',
-          fechaInicio: '2023-12-20',
-          fechaFin: '2023-12-31',
-          parqueaderoNombre: 'Todos los parqueaderos',
-          totalVehiculos: 2890,
-          totalIngresos: 15400000,
-          tiempoPromedioEstadia: 3.5,
-          vehiculosPorTipo: { carros: 1734, motos: 867, bicicletas: 289 },
-          fechaGeneracion: '2024-01-02T10:15:00Z',
-          estado: 'generado'
-        }
-      ];
-
-      setReportes(reportesMock);
+      // Cargar reportes guardados desde la base de datos
+      const reportesResult = await reporteService.obtenerReportesGuardados(50, 0);
+      if (reportesResult.success) {
+        setReportes(reportesResult.reportes);
+      }
       
     } catch (error) {
-      toast.error('Error cargando reportes');
+      toast.error('Error cargando datos');
     } finally {
       setLoading(false);
     }
@@ -175,49 +118,97 @@ const ReportesListView = () => {
     try {
       setGenerandoReporte(true);
 
-      const nuevoReporte = {
-        tipo: filtros.tipoReporte as any || 'personalizado',
+      // Validar fechas
+      if (!filtros.fechaInicio || !filtros.fechaFin) {
+        toast.error('Debe seleccionar fecha de inicio y fin');
+        return;
+      }
+
+      const fechaInicio = new Date(filtros.fechaInicio);
+      const fechaFin = new Date(filtros.fechaFin);
+
+      if (fechaInicio > fechaFin) {
+        toast.error('La fecha de inicio debe ser anterior a la fecha fin');
+        return;
+      }
+
+      // Obtener nombre del parqueadero
+      let parqueaderoNombre = 'Todos los parqueaderos';
+      if (filtros.parqueaderoId) {
+        const parqueadero = parqueaderos.find(p => p.id === parseInt(filtros.parqueaderoId));
+        if (parqueadero) {
+          parqueaderoNombre = parqueadero.nombre;
+        }
+      }
+
+      // Preparar filtros para el backend
+      const filtrosBackend = {
         fechaInicio: filtros.fechaInicio,
         fechaFin: filtros.fechaFin,
-        parqueaderoId: filtros.parqueaderoId ? parseInt(filtros.parqueaderoId) : undefined,
-        tipoVehiculo: filtros.tipoVehiculo
+        parqueaderoId: filtros.parqueaderoId || null,
+        parqueaderoNombre,
+        tipoVehiculo: filtros.tipoVehiculo || null,
+        controlador: filtros.controlador || null,
+        tipoReporte: filtros.tipoReporte === 'todos' ? 'personalizado' : filtros.tipoReporte
       };
 
-      const result = await reporteService.generarPorFecha(new Date(nuevoReporte.fechaInicio), new Date(nuevoReporte.fechaFin));
+      // Generar y guardar reporte en el backend
+      const result = await reporteService.generarYGuardarReporte(filtrosBackend);
       
       if (result.success) {
-        toast.success('Reporte generado exitosamente');
-        cargarDatos(); // Recargar lista de reportes
+        // Agregar reporte a la lista
+        setReportes(prev => [result.reporte, ...prev]);
+        toast.success('Reporte generado y guardado exitosamente');
       } else {
-        toast.error('Error al generar reporte');
+        toast.error(result.error || 'Error al generar reporte');
       }
 
     } catch (error) {
-      toast.error('Error de conexión al generar reporte');
+      console.error('Error generando reporte:', error);
+      toast.error('Error al generar reporte');
     } finally {
       setGenerandoReporte(false);
     }
   };
 
-  const descargarReporte = async (reporte: Reporte) => {
-    try {
-      // Simular descarga
-      toast.success(`Descargando reporte: ${reporte.titulo}`);
-      
-      // Actualizar estado del reporte
-      const reportesActualizados = reportes.map(r => 
-        r.id === reporte.id ? { ...r, estado: 'descargado' as const } : r
-      );
-      setReportes(reportesActualizados);
 
+  const imprimirReporte = (reporte: Reporte) => {
+    try {
+      // Primero establecer el reporte seleccionado
+      setReporteSeleccionado(reporte);
+      
+      // Esperar a que React renderice el componente y luego imprimir
+      setTimeout(() => {
+        // Verificar que el elemento existe
+        const reporteElement = document.getElementById('reporte-imprimible');
+        if (reporteElement) {
+          console.log('Elemento de reporte encontrado, iniciando impresión...');
+          window.print();
+        } else {
+          console.error('No se encontró el elemento de reporte');
+          toast.error('Error: No se pudo preparar el reporte para impresión');
+        }
+      }, 300); // Aumentar el tiempo de espera para asegurar renderizado
+      
+      toast.info('Preparando reporte para impresión...');
     } catch (error) {
-      toast.error('Error al descargar reporte');
+      console.error('Error al imprimir:', error);
+      toast.error('Error al preparar impresión');
     }
   };
 
-  const imprimirReporte = (reporte: Reporte) => {
-    // Simular impresión
-    toast.info(`Enviando a imprimir: ${reporte.titulo}`);
+  const abrirVistaPrevia = (reporte: Reporte) => {
+    setReporteSeleccionado(reporte);
+    setMostrarVistaPrevia(true);
+  };
+
+  const imprimirDesdeVistaPrevia = () => {
+    setMostrarVistaPrevia(false);
+    if (reporteSeleccionado) {
+      setTimeout(() => {
+        imprimirReporte(reporteSeleccionado);
+      }, 100);
+    }
   };
 
   const getEstadoColor = (estado: string) => {
@@ -501,28 +492,18 @@ const ReportesListView = () => {
                       
                       <div className="flex items-center space-x-2 ml-4">
                         <button
-                          onClick={() => {
-                            setReporteSeleccionado(reporte);
-                            setMostrarDetalle(true);
-                          }}
+                          onClick={() => abrirVistaPrevia(reporte)}
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="Ver detalle"
+                          title="Vista Previa e Imprimir"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => imprimirReporte(reporte)}
                           className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                          title="Imprimir"
+                          title="Imprimir Directamente"
                         >
                           <Printer className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => descargarReporte(reporte)}
-                          className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
-                          title="Descargar"
-                        >
-                          <Download className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -652,6 +633,22 @@ const ReportesListView = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Modal de Vista Previa */}
+      {mostrarVistaPrevia && reporteSeleccionado && (
+        <VistaReporteModal
+          reporte={reporteSeleccionado}
+          onClose={() => setMostrarVistaPrevia(false)}
+          onImprimir={imprimirDesdeVistaPrevia}
+        />
+      )}
+
+      {/* Componente oculto para impresión */}
+      {reporteSeleccionado && (
+        <div ref={reporteImprimibleRef}>
+          <ReporteImprimible reporte={reporteSeleccionado} />
         </div>
       )}
     </div>
