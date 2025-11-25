@@ -26,14 +26,14 @@ export const authMiddleware = (req, res, next) => {
 };
 
 export const adminMiddleware = (req, res, next) => {
-  // Verificar tanto 'admin' como 'ADMIN' para compatibilidad
-  if (req.user.rol !== 'admin' && req.user.rol !== 'ADMIN') {
-    return res.status(403).json({ 
-      success: false, 
-      error: 'Acceso denegado. Se requieren permisos de administrador' 
+  if (req.user && (req.user.rol === 'ADMIN' || req.user.rol === 'admin')) {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      error: 'Acceso denegado. Se requieren permisos de administrador.'
     });
   }
-  next();
 };
 
 /**

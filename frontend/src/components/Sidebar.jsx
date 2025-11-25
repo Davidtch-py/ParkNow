@@ -22,31 +22,37 @@ const Sidebar = () => {
       path: '/dashboard',
       name: 'Dashboard',
       icon: <LayoutDashboard className="w-5 h-5" />,
-      roles: ['admin', 'controlador'] // Todos pueden ver el dashboard
+      roles: ['ADMIN', 'CONTROLADOR'] // Todos pueden ver el dashboard
     },
     {
-      path: '/parqueaderos',
-      name: 'Parqueaderos',
+      path: '/registro-entrada-salida',
+      name: 'Entradas/Salidas',
       icon: <Car className="w-5 h-5" />,
-      roles: ['admin', 'controlador'] // Todos pueden ver parqueaderos
-    },
-    {
-      path: '/usuarios',
-      name: 'Usuarios',
-      icon: <Users className="w-5 h-5" />,
-      roles: ['admin'] // Solo admin puede gestionar usuarios
+      roles: ['ADMIN', 'CONTROLADOR'] // Todos pueden registrar entradas/salidas
     },
     {
       path: '/vehiculos',
       name: 'Vehículos',
       icon: <Car className="w-5 h-5" />,
-      roles: ['admin', 'controlador'] // Todos pueden ver vehículos
+      roles: ['ADMIN', 'CONTROLADOR'] // Todos pueden ver vehículos
     },
     {
       path: '/reportes',
       name: 'Reportes',
       icon: <FileText className="w-5 h-5" />,
-      roles: ['admin'] // Solo admin puede ver reportes completos
+      roles: ['ADMIN', 'CONTROLADOR'] // Controladores ven solo sus parqueaderos
+    },
+    {
+      path: '/parqueaderos',
+      name: 'Parqueaderos',
+      icon: <Car className="w-5 h-5" />,
+      roles: ['ADMIN'] // Solo admin puede gestionar parqueaderos
+    },
+    {
+      path: '/usuarios',
+      name: 'Usuarios',
+      icon: <Users className="w-5 h-5" />,
+      roles: ['ADMIN'] // Solo admin puede gestionar usuarios
     }
   ];
 

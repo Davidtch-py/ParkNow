@@ -26,13 +26,14 @@ const salidaUseCase = new SalidaUseCase(
 export class SalidaController {
   async registrar(req, res) {
     try {
-      const { entradaId, parqueaderoId, observaciones } = req.body;
+      const { entradaId, parqueaderoId, observaciones, montoTotal } = req.body;
       const controladorId = req.user.id;
 
       console.log('📤 Datos recibidos para registrar salida:', {
         entradaId,
         parqueaderoId,
         observaciones,
+        montoTotal,
         controladorId
       });
 
@@ -47,6 +48,7 @@ export class SalidaController {
         entradaId,
         parqueaderoId,
         observaciones,
+        montoTotal,
         controladorId
       });
 

@@ -62,57 +62,54 @@ export class EntradaRepository {
     try {
       const parqueaderoIdInt = parseInt(parqueaderoId);
       
-      // Obtener todos los espacios de este parqueadero
-      const espaciosDelParqueadero = await Espacio.findAll({
-        where: { id_parqueadero: parqueaderoIdInt },
-        attributes: ['id'],
-        raw: true
-      });
-      
-      const idsEspacios = espaciosDelParqueadero.map(e => e.id);
-      
-      console.log(`[EntradaRepository] Espacios encontrados para parqueadero ${parqueaderoId}:`, idsEspacios);
-      console.log(`[EntradaRepository] Total de espacios: ${idsEspacios.length}`);
-      
-      let registros = [];
-      
-      if (idsEspacios.length > 0) {
-        // Si hay espacios, buscar registros con esos espacios
-        registros = await Registro.findAll({
-          where: { 
-            fecha_salida: null,
-            id_espacio: { [Op.in]: idsEspacios }
+      // Buscar registros activos (sin fecha_salida) que pertenezcan al parqueadero
+      // Incluir tanto los que tienen espacio asignado como los que no
+      const registros = await Registro.findAll({
+        where: { 
+          fecha_salida: null
+        },
+        include: [
+          { 
+            model: Vehiculo, 
+            as: 'vehiculo',
+            required: true
           },
-          include: [
-            { 
-              model: Vehiculo, 
-              as: 'vehiculo'
-            },
-            { 
-              model: Usuario, 
-              as: 'controlador', 
-              attributes: ['id', 'nombre']
-            },
-            { 
-              model: Espacio, 
-              as: 'espacio',
-              include: [{ 
-                model: Parqueadero, 
-                as: 'parqueadero'
-              }]
-            }
-          ]
-        });
-      }
-      
-      console.log(`[EntradaRepository] Encontrados ${registros.length} registros activos para parqueadero ${parqueaderoId}`);
-      registros.forEach((r, idx) => {
-        console.log(`  [${idx + 1}] Placa: ${r.vehiculo?.placa}, Espacio: ${r.espacio?.codigo_espacio}`);
+          { 
+            model: Usuario, 
+            as: 'controlador', 
+            attributes: ['id', 'nombre']
+          },
+          { 
+            model: Espacio, 
+            as: 'espacio',
+            required: false, // Permitir registros sin espacio
+            include: [{ 
+              model: Parqueadero, 
+              as: 'parqueadero',
+              where: { id: parqueaderoIdInt },
+              required: false
+            }]
+          }
+        ]
       });
       
-      return registros;
+      // Filtrar solo los que pertenecen al parqueadero
+      // (los que tienen espacio.parqueadero.id === parqueaderoId)
+      const registrosFiltrados = registros.filter(r => {
+        const parqueaderoDelRegistro = r.espacio?.parqueadero?.id;
+        return parqueaderoDelRegistro === parqueaderoIdInt;
+      });
+      
+      console.log(`[EntradaRepository] Total registros activos encontrados: ${registros.length}`);
+      console.log(`[EntradaRepository] Registros del parqueadero ${parqueaderoId}: ${registrosFiltrados.length}`);
+      registrosFiltrados.forEach((r, idx) => {
+        console.log(`  [${idx + 1}] Placa: ${r.vehiculo?.placa}, Espacio: ${r.espacio?.codigo_espacio || 'Sin asignar'}`);
+      });
+      
+      return registrosFiltrados;
     } catch (error) {
       console.error(`[EntradaRepository] Error en findActiveByParqueadero:`, error.message);
+      console.error(`[EntradaRepository] Stack:`, error.stack);
       throw error;
     }
   }

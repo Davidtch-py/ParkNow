@@ -12,8 +12,9 @@ import {
   TrendingUp
 } from 'lucide-react';
 import CountUp from 'react-countup';
-import { tarifaService, parqueaderoService } from '../services/index';
+import { tarifaService, parqueaderoService, reporteService, usuarioService } from '../services/index';
 import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 
 interface Tarifa {
   id: number;
@@ -40,6 +41,8 @@ const GestionTarifas = () => {
   const [tarifas, setTarifas] = useState<Tarifa[]>([]);
   const [tarifasFiltradas, setTarifasFiltradas] = useState<Tarifa[]>([]);
   const [parqueaderos, setParqueaderos] = useState<any[]>([]);
+  const [parqueaderosAsignados, setParqueaderosAsignados] = useState<number[]>([]);
+  const [puedeEditarTarifas, setPuedeEditarTarifas] = useState(false);
   const [estadisticas, setEstadisticas] = useState<EstadisticasTarifas>({
     totalTarifas: 0,
     tarifasActivas: 0,
@@ -55,7 +58,7 @@ const GestionTarifas = () => {
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [filtroParqueadero, setFiltroParqueadero] = useState('todos');
 
-  // const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const [formTarifa, setFormTarifa] = useState({
     parqueaderoId: '',
@@ -100,11 +103,25 @@ const GestionTarifas = () => {
     try {
       setLoading(true);
 
-      // Cargar parqueaderos
-      const parqueaderosResult = await parqueaderoService.getAll();
-      if (parqueaderosResult.success) {
-        setParqueaderos(parqueaderosResult.parqueaderos);
+      // Cargar parqueaderos según rol
+      let parqueaderosDisponibles = [];
+      if (isAdmin) {
+        const parqueaderosResult = await parqueaderoService.getAll();
+        if (parqueaderosResult.success) {
+          parqueaderosDisponibles = parqueaderosResult.parqueaderos;
+        }
+      } else if (user) {
+        // Controlador: solo sus parqueaderos asignados
+        const asignadosResult = await usuarioService.obtenerParqueaderosAsignados(user.id);
+        if (asignadosResult.success && asignadosResult.parqueaderos) {
+          parqueaderosDisponibles = asignadosResult.parqueaderos;
+          setParqueaderosAsignados(asignadosResult.parqueaderos.map((p: any) => p.id));
+        }
+        // TODO: Verificar si el controlador tiene permiso para editar tarifas
+        // Por ahora, los controladores no pueden editar tarifas por defecto
+        setPuedeEditarTarifas(false);
       }
+      setParqueaderos(parqueaderosDisponibles);
 
       // Intentar cargar tarifas reales desde la API
       const tarifasResult = await tarifaService.getAll();
@@ -212,13 +229,22 @@ const GestionTarifas = () => {
         ? Math.round(carrosActivos.reduce((sum: number, t: any) => sum + (t.valor || 0), 0) / carrosActivos.length)
         : 0;
 
+      // Obtener ingresos diarios reales
+      let ingresosDiariosReales = 0;
+      try {
+        const ingresosResult = await reporteService.obtenerIngresosDiarios();
+        if (ingresosResult.success) {
+          ingresosDiariosReales = ingresosResult.ingresosDiarios || 0;
+        }
+      } catch (error) {
+        console.error('Error obteniendo ingresos diarios:', error);
+      }
+
       const stats: EstadisticasTarifas = {
         totalTarifas: (sourceTarifas as any[]).length,
         tarifasActivas: (sourceTarifas as any[]).filter(t => t.activa).length,
         promedioTarifaCarros: promedioCarros,
-        // Calcular ingresos diarios estimados basados en el promedio de tarifas de carros
-        // Asumimos un promedio de 100 vehículos por día como base
-        ingresosDiarios: promedioCarros * 100
+        ingresosDiarios: ingresosDiariosReales
       };
       setEstadisticas(stats);
 
@@ -230,6 +256,10 @@ const GestionTarifas = () => {
   };
 
   const abrirModalCrear = () => {
+    if (!isAdmin && !puedeEditarTarifas) {
+      toast.error('No tienes permisos para crear tarifas');
+      return;
+    }
     setTarifaEditando(null);
     setFormTarifa({
       parqueaderoId: '',
@@ -244,6 +274,15 @@ const GestionTarifas = () => {
   };
 
   const abrirModalEditar = (tarifa: Tarifa) => {
+    if (!isAdmin && !puedeEditarTarifas) {
+      toast.error('No tienes permisos para editar tarifas');
+      return;
+    }
+    // Controladores solo pueden editar tarifas de sus parqueaderos asignados
+    if (!isAdmin && tarifa.parqueaderoId && !parqueaderosAsignados.includes(tarifa.parqueaderoId)) {
+      toast.error('No puedes editar tarifas de este parqueadero');
+      return;
+    }
     setTarifaEditando(tarifa);
     setFormTarifa({
       parqueaderoId: tarifa.parqueaderoId?.toString() || '',

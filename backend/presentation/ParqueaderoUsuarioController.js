@@ -39,10 +39,46 @@ export class ParqueaderoUsuarioController {
         });
       }
 
-      if (usuario.rol !== 'CONTROLADOR') {
+      // Debug: Ver el objeto completo del usuario
+      console.log('[DEBUG] Usuario completo:', JSON.stringify(usuario, null, 2));
+      console.log('[DEBUG] Rol del usuario:', usuario.rol);
+      console.log('[DEBUG] Tipo de rol:', typeof usuario.rol);
+      console.log('[DEBUG] Datos del usuario:', {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol
+      });
+
+      // Validación case-insensitive del rol con limpieza de espacios
+      const rolLimpio = (usuario.rol || '').toString().trim();
+      const rolUsuario = rolLimpio.toUpperCase();
+      console.log('[DEBUG] Rol normalizado:', rolUsuario);
+      console.log('[DEBUG] Comparación:', {
+        rolLimpio,
+        rolUsuario,
+        esControlador: rolUsuario === 'CONTROLADOR',
+        esAdmin: rolUsuario === 'ADMIN',
+        includes: rolUsuario.includes('CONTROLADOR') || rolUsuario.includes('ADMIN')
+      });
+      
+      // Validación más flexible: buscar si contiene CONTROLADOR o ADMIN
+      const esRolValido = rolUsuario === 'CONTROLADOR' || 
+                         rolUsuario === 'ADMIN' ||
+                         rolUsuario.includes('CONTROLADOR') ||
+                         rolUsuario.includes('ADMIN');
+      
+      if (!esRolValido) {
+        console.error('[ERROR] Rol no válido:', {
+          rolOriginal: usuario.rol,
+          rolLimpio: rolLimpio,
+          rolNormalizado: rolUsuario,
+          esperado: 'CONTROLADOR o ADMIN',
+          bytes: Buffer.from(rolLimpio).toString('hex')
+        });
         return res.status(400).json({
           success: false,
-          error: 'Solo se pueden asignar usuarios con rol CONTROLADOR'
+          error: `Solo se pueden asignar usuarios con rol CONTROLADOR (rol actual: "${usuario.rol}", limpio: "${rolLimpio}", normalizado: "${rolUsuario}")`
         });
       }
 

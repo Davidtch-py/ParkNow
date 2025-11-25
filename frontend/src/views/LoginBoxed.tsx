@@ -147,11 +147,11 @@ const LoginBoxed = () => {
     return false; // Always prevent default form behavior
   };
 
-  const fillDemoCredentials = (role: 'admin' | 'controlador') => {
+  const fillDemoCredentials = (role: 'ADMIN' | 'CONTROLADOR') => {
     setError(''); // Limpiar errores al llenar credenciales
     setValidationErrors({ email: '', password: '' });
 
-    if (role === 'admin') {
+    if (role === 'ADMIN') {
       setEmail('admin@parqueadero.com');
       setPassword('password');
     } else {
@@ -352,7 +352,7 @@ const LoginBoxed = () => {
                 <div className="space-y-2">
                   <button
                     type="button"
-                    onClick={() => fillDemoCredentials('admin')}
+                    onClick={() => fillDemoCredentials('ADMIN')}
                     className="w-full text-left px-3 py-2 text-sm bg-white border rounded transition-all"
                     style={{
                       borderColor: 'rgb(210, 205, 190)'
@@ -374,7 +374,7 @@ const LoginBoxed = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => fillDemoCredentials('controlador')}
+                    onClick={() => fillDemoCredentials('CONTROLADOR')}
                     className="w-full text-left px-3 py-2 text-sm bg-white border rounded transition-all"
                     style={{
                       borderColor: 'rgb(210, 205, 190)'

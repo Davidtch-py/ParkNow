@@ -7,6 +7,7 @@ interface User {
   email: string;
   rol: 'ADMIN' | 'CONTROLADOR' | 'admin' | 'controlador';
   activo?: boolean;
+  parqueaderosAsignados?: number[]; // IDs de parqueaderos asignados
 }
 
 interface AuthContextType {
@@ -16,6 +17,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   loading: boolean;
+  parqueaderosAsignados: number[];
+  tieneAccesoParqueadero: (parqueaderoId: number) => boolean;
 }
 
 interface AuthProviderProps {
@@ -95,6 +98,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = !!user;
   const isAdmin = user?.rol === 'admin' || user?.rol === 'ADMIN';
+  
+  // Obtener parqueaderos asignados (solo para controladores)
+  const parqueaderosAsignados = user?.parqueaderosAsignados || [];
+  
+  // Verificar si el usuario tiene acceso a un parqueadero específico
+  const tieneAccesoParqueadero = (parqueaderoId: number): boolean => {
+    // Los admins tienen acceso a todos los parqueaderos
+    if (isAdmin) return true;
+    
+    // Los controladores solo tienen acceso a sus parqueaderos asignados
+    return parqueaderosAsignados.includes(parqueaderoId);
+  };
 
   const value: AuthContextType = {
     user,
@@ -102,7 +117,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAdmin,
     login,
     logout,
-    loading
+    loading,
+    parqueaderosAsignados,
+    tieneAccesoParqueadero
   };
 
   return (

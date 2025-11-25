@@ -20,16 +20,22 @@ const SimpleSidebar = ({ isMobileSidebarOpen, toggleMobileSidebar }: SidebarProp
   // Filtrar elementos del menú según el rol del usuario
   const filteredMenuItems = simpleMenuData.filter((item: any) => {
     // Mostrar títulos siempre
-    if (item.isTitle) return true;
-
-    // Para administradores mostrar todo
-    if (user?.rol === 'admin') return true;
-
-    // Para controladores, ocultar la sección de usuarios
-    if (user?.rol === 'controlador' && (item.id === 'usuarios' || item.id === 'configuracion')) {
-      return false;
+    if (item.isTitle) {
+      // Si el título tiene roles, verificar
+      if (item.roles && Array.isArray(item.roles)) {
+        const userRole = user?.rol?.toUpperCase();
+        return item.roles.includes(userRole);
+      }
+      return true;
     }
 
+    // Para items con roles definidos
+    if (item.roles && Array.isArray(item.roles)) {
+      const userRole = user?.rol?.toUpperCase();
+      return item.roles.includes(userRole);
+    }
+
+    // Si no tiene roles definidos, mostrar a todos (retrocompatibilidad)
     return true;
   });
 
@@ -69,7 +75,7 @@ const SimpleSidebar = ({ isMobileSidebarOpen, toggleMobileSidebar }: SidebarProp
             <div>
               <p className="font-medium dark:text-white">{user?.nombre || 'Usuario'}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {user?.rol === 'admin' ? 'Administrador' : 'Controlador'}
+                {user?.rol === 'ADMIN' ? 'Administrador' : 'Controlador'}
               </p>
             </div>
           </div>

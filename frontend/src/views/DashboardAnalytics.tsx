@@ -16,7 +16,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import CountUp from 'react-countup';
-import { parqueaderoService, entradaService, salidaService } from '../services/index';
+import { parqueaderoService, entradaService, salidaService, reporteService } from '../services/index';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import EmptyState from '../components/EmptyState';
 import AlertasCapacidad from '../components/AlertasCapacidad';
@@ -90,6 +90,7 @@ const DashboardAnalytics = () => {
         // Controlador solo ve sus parqueaderos asignados
         parqueaderosResponse = await parqueaderoService.getParqueaderosPorControlador();
         console.log('📊 [CONTROLADOR] Respuesta parqueaderos (asignados):', parqueaderosResponse);
+        console.log('📊 [CONTROLADOR] Número de parqueaderos:', parqueaderosResponse?.parqueaderos?.length);
         
         // Adaptar la respuesta al formato esperado
         if (parqueaderosResponse.success && parqueaderosResponse.parqueaderos) {
@@ -97,12 +98,21 @@ const DashboardAnalytics = () => {
             success: true,
             parqueaderos: parqueaderosResponse.parqueaderos
           };
+        } else {
+          console.warn('⚠️ [CONTROLADOR] No hay parqueaderos asignados o error en respuesta');
+          parqueaderosResponse = {
+            success: true,
+            parqueaderos: []
+          };
         }
       }
       
-      if (!parqueaderosResponse.success) {
+      if (!parqueaderosResponse.success || !parqueaderosResponse.parqueaderos) {
+        console.error('❌ Error al cargar parqueaderos:', parqueaderosResponse);
         throw new Error('Error al cargar parqueaderos');
       }
+      
+      console.log('✅ Parqueaderos cargados:', parqueaderosResponse.parqueaderos.length);
       
       // Obtener entradas activas para calcular ocupación
       const entradasResponse = await entradaService.getAll();
@@ -130,11 +140,20 @@ const DashboardAnalytics = () => {
       
       // Procesar datos de parqueaderos con ocupación real
       const parqueaderosData: ParqueaderoStatus[] = parqueaderosResponse.parqueaderos.map((p: any) => {
-        const capacidadTotal = p.capacidadTotal || 0;
-        const capacidadDisponible = p.capacidadDisponible || 0;
+        // Soportar tanto camelCase como snake_case
+        const capacidadTotal = p.capacidadTotal || p.capacidad_total || 0;
+        const capacidadDisponible = p.capacidadDisponible || p.capacidad_disponible || 0;
         const ocupados = capacidadTotal - capacidadDisponible;
         const disponibles = capacidadDisponible;
         const porcentajeOcupacion = capacidadTotal > 0 ? Math.round((ocupados / capacidadTotal) * 100) : 0;
+        
+        console.log(`📊 Parqueadero ${p.nombre}:`, {
+          capacidadTotal,
+          capacidadDisponible,
+          ocupados,
+          disponibles,
+          porcentajeOcupacion
+        });
         
         let status: 'normal' | 'warning' | 'critical' = 'normal';
         if (porcentajeOcupacion >= 90) {
@@ -155,25 +174,72 @@ const DashboardAnalytics = () => {
       });
       
       // Calcular estadísticas generales usando datos reales
-      const espaciosTotales = parqueaderosResponse.parqueaderos.reduce((acc: number, p: any) => acc + (p.capacidadTotal || 0), 0);
-      const espaciosDisponibles = parqueaderosResponse.parqueaderos.reduce((acc: number, p: any) => acc + (p.capacidadDisponible || 0), 0);
+      const espaciosTotales = parqueaderosResponse.parqueaderos.reduce((acc: number, p: any) => {
+        const total = p.capacidadTotal || p.capacidad_total || 0;
+        return acc + total;
+      }, 0);
+      const espaciosDisponibles = parqueaderosResponse.parqueaderos.reduce((acc: number, p: any) => {
+        const disponible = p.capacidadDisponible || p.capacidad_disponible || 0;
+        return acc + disponible;
+      }, 0);
       const espaciosOcupados = espaciosTotales - espaciosDisponibles;
       const ocupacionPromedio = espaciosTotales > 0 ? Math.round((espaciosOcupados / espaciosTotales) * 100) : 0;
       
-      // Calcular estadísticas del día actual usando SOLO las entradas activas
+      // Calcular estadísticas del día actual
       let vehiculosHoy = 0;
-      let tiempoPromedioEstadia = 2.5; // Valor por defecto
+      let tiempoPromedioEstadia = 0;
+      let ingresosDia = 0;
       
+      // Definir rango del día actual
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const mañana = new Date(hoy);
+      mañana.setDate(mañana.getDate() + 1);
+      
+      // Contar entradas del día
       if (entradasActivas.length > 0) {
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        const mañana = new Date(hoy);
-        mañana.setDate(mañana.getDate() + 1);
-        
         vehiculosHoy = entradasActivas.filter((entrada: any) => {
           const fechaEntrada = new Date(entrada.fechaHoraEntrada);
           return fechaEntrada >= hoy && fechaEntrada < mañana;
         }).length;
+      }
+      
+      // Obtener tiempo promedio de estadía y calcular ingresos reales desde el backend
+      try {
+        const estadisticasResponse = await reporteService.obtenerEstadisticasDashboard();
+        if (estadisticasResponse.success) {
+          tiempoPromedioEstadia = estadisticasResponse.tiempoPromedioEstadia || 0;
+          console.log('⏱️ Tiempo promedio de estadía:', tiempoPromedioEstadia);
+        }
+      } catch (error) {
+        console.error('Error obteniendo tiempo promedio:', error);
+        tiempoPromedioEstadia = 0;
+      }
+      
+      // Calcular ingresos reales del día desde las salidas
+      console.log('💰 [DEBUG] salidasResponse:', salidasResponse);
+      if (salidasResponse.success && salidasResponse.salidas) {
+        console.log('💰 [DEBUG] Total salidas en BD:', salidasResponse.salidas.length);
+        console.log('💰 [DEBUG] Primeras 3 salidas:', salidasResponse.salidas.slice(0, 3));
+        
+        const salidasHoy = salidasResponse.salidas.filter((salida: any) => {
+          const fechaSalida = new Date(salida.fecha_salida || salida.fechaHoraSalida);
+          return fechaSalida >= hoy && fechaSalida < mañana;
+        });
+        
+        console.log('💰 [DEBUG] Salidas filtradas hoy:', salidasHoy.length);
+        console.log('💰 [DEBUG] Salidas hoy completas:', salidasHoy);
+        
+        ingresosDia = salidasHoy.reduce((total: number, salida: any) => {
+          const monto = parseFloat(salida.monto_total || salida.montoTotal || 0);
+          console.log(`💰 [DEBUG] Salida ID ${salida.id}: monto_total=${salida.monto_total}, montoTotal=${salida.montoTotal}, parseado=${monto}`);
+          return total + monto;
+        }, 0);
+        
+        console.log('💰 Salidas hoy:', salidasHoy.length);
+        console.log('💰 Ingresos del día:', ingresosDia);
+      } else {
+        console.log('💰 [DEBUG] No hay salidas o error:', salidasResponse);
       }
       
       // Generar distribución por tipo de vehículo usando SOLO entradas activas
@@ -212,9 +278,6 @@ const DashboardAnalytics = () => {
           });
         }
       });
-      
-      // Calcular ingresos estimados (simplificado)
-      const ingresosDia = vehiculosHoy * 5000; // $5,000 promedio por vehículo
       
       // Verificar alertas de baja capacidad
       let alertasActivas = 0;

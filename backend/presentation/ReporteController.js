@@ -95,4 +95,95 @@ export class ReporteController {
       });
     }
   }
+
+  async obtenerIngresosDiarios(req, res) {
+    try {
+      const { parqueaderoId } = req.query;
+      
+      // Obtener fecha de hoy (inicio y fin del día)
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const finDia = new Date(hoy);
+      finDia.setHours(23, 59, 59, 999);
+
+      const result = await reporteUseCase.generarReportePorFecha(
+        hoy,
+        finDia,
+        parqueaderoId ? parseInt(parqueaderoId) : null
+      );
+
+      // Calcular total de ingresos del día
+      const ingresosDiarios = result.registros?.reduce((total, registro) => {
+        return total + (parseFloat(registro.monto_total) || 0);
+      }, 0) || 0;
+
+      res.json({
+        success: true,
+        ingresosDiarios: Math.round(ingresosDiarios),
+        fecha: hoy.toISOString().split('T')[0],
+        totalRegistros: result.registros?.length || 0
+      });
+    } catch (error) {
+      console.error('[ERROR] Error obteniendo ingresos diarios:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor',
+        ingresosDiarios: 0
+      });
+    }
+  }
+
+  async obtenerEstadisticasDashboard(req, res) {
+    try {
+      const { parqueaderoId } = req.query;
+      
+      console.log('[DEBUG] Obteniendo estadísticas dashboard para parqueadero:', parqueaderoId);
+      
+      // Obtener todas las salidas registradas (registros con fecha_salida)
+      const salidas = await salidaRepository.findAll();
+      console.log('[DEBUG] Total salidas encontradas:', salidas.length);
+      
+      // Filtrar por parqueadero si se especifica
+      let salidasFiltradas = salidas;
+      if (parqueaderoId) {
+        salidasFiltradas = salidas.filter(s => {
+          // El parqueadero está en espacio.parqueadero.id
+          const parqueaderoIdSalida = s.espacio?.parqueadero?.id || s.espacio?.id_parqueadero;
+          return parqueaderoIdSalida === parseInt(parqueaderoId);
+        });
+        console.log('[DEBUG] Salidas filtradas por parqueadero:', salidasFiltradas.length);
+      }
+      
+      // Calcular tiempo promedio de estadía
+      let tiempoPromedioHoras = 0;
+      if (salidasFiltradas.length > 0) {
+        const tiemposTotales = salidasFiltradas.map(salida => {
+          const entrada = new Date(salida.fecha_ingreso);
+          const salidaDate = new Date(salida.fecha_salida);
+          const diferenciaMs = salidaDate - entrada;
+          const horas = diferenciaMs / (1000 * 60 * 60);
+          return horas;
+        });
+        
+        const sumaHoras = tiemposTotales.reduce((acc, h) => acc + h, 0);
+        tiempoPromedioHoras = sumaHoras / tiemposTotales.length;
+        
+        console.log('[DEBUG] Tiempos calculados:', tiemposTotales);
+        console.log('[DEBUG] Tiempo promedio (horas):', tiempoPromedioHoras);
+      }
+      
+      res.json({
+        success: true,
+        tiempoPromedioEstadia: Math.round(tiempoPromedioHoras * 10) / 10, // Redondear a 1 decimal
+        totalSalidas: salidasFiltradas.length
+      });
+    } catch (error) {
+      console.error('[ERROR] Error obteniendo estadísticas dashboard:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor',
+        tiempoPromedioEstadia: 0
+      });
+    }
+  }
 }

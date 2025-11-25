@@ -154,10 +154,6 @@ const MatrizEspacios: React.FC<MatrizEspaciosProps> = ({ parqueaderoId, capacida
           <div className="w-6 h-6 bg-yellow-500 rounded"></div>
           <span className="text-sm text-gray-700">Reservado</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-gray-400 rounded"></div>
-          <span className="text-sm text-gray-700">Fuera de servicio</span>
-        </div>
       </div>
 
       {/* Matriz de espacios */}
@@ -264,7 +260,7 @@ const MatrizEspacios: React.FC<MatrizEspaciosProps> = ({ parqueaderoId, capacida
       </div>
 
       {/* Estadísticas */}
-      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-3">
         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
           <p className="text-xs text-green-600 font-medium">Libres</p>
           <p className="text-2xl font-bold text-green-700">
@@ -281,12 +277,6 @@ const MatrizEspacios: React.FC<MatrizEspaciosProps> = ({ parqueaderoId, capacida
           <p className="text-xs text-yellow-600 font-medium">Reservados</p>
           <p className="text-2xl font-bold text-yellow-700">
             {espacios.filter(e => e.estado === 'RESERVADO').length}
-          </p>
-        </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-          <p className="text-xs text-gray-600 font-medium">Fuera de servicio</p>
-          <p className="text-2xl font-bold text-gray-700">
-            {espacios.filter(e => e.estado === 'FUERA_SERVICIO').length}
           </p>
         </div>
       </div>

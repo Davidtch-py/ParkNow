@@ -21,13 +21,13 @@ export const useMQTTNotifications = () => {
     }
 
     // Topics específicos por rol
-    if (user.rol === 'admin') {
+    if (user.rol === 'ADMIN') {
       // Admin recibe todas las notificaciones
       topics.push('parknow/notificaciones/capacidad');
       topics.push('parknow/notificaciones/entradas');
       topics.push('parknow/notificaciones/salidas');
       topics.push('parknow/notificaciones/alertas');
-    } else if (user.rol === 'controlador') {
+    } else if (user.rol === 'CONTROLADOR') {
       // Controladores reciben notificaciones de sus parqueaderos
       topics.push('parknow/notificaciones/capacidad');
       topics.push('parknow/notificaciones/entradas');

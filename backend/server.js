@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { sequelize, Usuario, Parqueadero, Vehiculo, Tarifa, Horario, Registro } from './persistence/models.js';
-import { authMiddleware, adminMiddleware } from './infrastructure/authMiddleware.js';
+import { sequelize, Usuario, Parqueadero, Vehiculo, Tarifa, Horario, Registro, Espacio } from './persistence/models.js';
+import { authMiddleware, adminMiddleware, parqueaderoAccessMiddleware } from './infrastructure/authMiddleware.js';
 import { errorHandler, notFoundHandler } from './infrastructure/errorHandler.js';
 import { mqttService } from './infrastructure/mqttService.js';
 
@@ -213,7 +213,7 @@ app.delete('/api/vehiculos/:id', authMiddleware, adminMiddleware, vehiculoContro
 app.post('/api/entradas', authMiddleware, entradaController.registrar.bind(entradaController));
 app.get('/api/entradas', authMiddleware, entradaController.obtenerTodas.bind(entradaController));
 app.get('/api/entradas/:id', authMiddleware, entradaController.obtenerPorId.bind(entradaController));
-app.get('/api/entradas/parqueadero/:parqueaderoId/activas', authMiddleware, entradaController.obtenerActivas.bind(entradaController));
+app.get('/api/entradas/parqueadero/:parqueaderoId/activas', authMiddleware, parqueaderoAccessMiddleware, entradaController.obtenerActivas.bind(entradaController));
 
 // Rutas de salidas
 app.post('/api/salidas', authMiddleware, salidaController.registrar.bind(salidaController));
@@ -221,6 +221,8 @@ app.get('/api/salidas', authMiddleware, salidaController.obtenerTodas.bind(salid
 app.get('/api/salidas/:id', authMiddleware, salidaController.obtenerPorId.bind(salidaController));
 
 // Rutas de reportes
+app.get('/api/reportes/estadisticas-dashboard', authMiddleware, reporteController.obtenerEstadisticasDashboard.bind(reporteController));
+app.get('/api/reportes/ingresos-diarios', authMiddleware, reporteController.obtenerIngresosDiarios.bind(reporteController));
 app.get('/api/reportes/fecha', authMiddleware, reporteController.generarPorFecha.bind(reporteController));
 app.get('/api/reportes/tipo-vehiculo', authMiddleware, reporteController.generarPorTipoVehiculo.bind(reporteController));
 app.get('/api/reportes/controlador', authMiddleware, reporteController.generarPorControlador.bind(reporteController));
@@ -234,7 +236,7 @@ app.delete('/api/tarifas/:id', authMiddleware, adminMiddleware, tarifaController
 
 // Rutas de cálculo de tarifas
 app.post('/api/tarifas/calcular-costo', authMiddleware, tarifaCalculoController.calcularCosto.bind(tarifaCalculoController));
-app.get('/api/tarifas/parqueadero/:parqueaderoId', authMiddleware, tarifaCalculoController.obtenerTarifasParqueadero.bind(tarifaCalculoController));
+app.get('/api/tarifas/parqueadero/:parqueaderoId', authMiddleware, parqueaderoAccessMiddleware, tarifaCalculoController.obtenerTarifasParqueadero.bind(tarifaCalculoController));
 
 // Rutas de usuarios (administración)
 app.get('/api/usuarios', authMiddleware, adminMiddleware, usuarioController.obtenerTodos.bind(usuarioController));
@@ -247,7 +249,7 @@ app.delete('/api/usuarios/:id', authMiddleware, adminMiddleware, usuarioControll
 // Rutas de horarios
 app.get('/api/horarios', authMiddleware, horarioController.obtenerTodos.bind(horarioController));
 app.get('/api/horarios/:id', authMiddleware, horarioController.obtenerPorId.bind(horarioController));
-app.get('/api/horarios/parqueadero/:parqueaderoId', authMiddleware, horarioController.obtenerPorParqueadero.bind(horarioController));
+app.get('/api/horarios/parqueadero/:parqueaderoId', authMiddleware, parqueaderoAccessMiddleware, horarioController.obtenerPorParqueadero.bind(horarioController));
 app.post('/api/horarios', authMiddleware, adminMiddleware, horarioController.crear.bind(horarioController));
 app.put('/api/horarios/:id', authMiddleware, adminMiddleware, horarioController.actualizar.bind(horarioController));
 app.delete('/api/horarios/:id', authMiddleware, adminMiddleware, horarioController.eliminar.bind(horarioController));
@@ -255,9 +257,10 @@ app.delete('/api/horarios/:id', authMiddleware, adminMiddleware, horarioControll
 // Rutas de asignación de parqueaderos a controladores
 app.post('/api/parqueaderos-usuarios/asignar', authMiddleware, adminMiddleware, parqueaderoUsuarioController.asignar.bind(parqueaderoUsuarioController));
 app.post('/api/parqueaderos-usuarios/desasignar', authMiddleware, adminMiddleware, parqueaderoUsuarioController.desasignar.bind(parqueaderoUsuarioController));
-app.get('/api/parqueaderos-usuarios/controlador/:idUsuario?', authMiddleware, parqueaderoUsuarioController.obtenerParqueaderosPorControlador.bind(parqueaderoUsuarioController));
-app.get('/api/parqueaderos-usuarios/parqueadero/:idParqueadero', authMiddleware, parqueaderoUsuarioController.obtenerControladoresPorParqueadero.bind(parqueaderoUsuarioController));
+// IMPORTANTE: Rutas más específicas primero
 app.get('/api/parqueaderos-usuarios/controladores', authMiddleware, adminMiddleware, parqueaderoUsuarioController.obtenerTodosLosControladores.bind(parqueaderoUsuarioController));
+app.get('/api/parqueaderos-usuarios/controlador/:idUsuario', authMiddleware, parqueaderoUsuarioController.obtenerParqueaderosPorControlador.bind(parqueaderoUsuarioController));
+app.get('/api/parqueaderos-usuarios/parqueadero/:idParqueadero', authMiddleware, parqueaderoUsuarioController.obtenerControladoresPorParqueadero.bind(parqueaderoUsuarioController));
 
 // Rutas de festivos
 app.get('/api/festivos', authMiddleware, festivoController.obtenerTodos.bind(festivoController));
@@ -276,8 +279,8 @@ app.post('/api/notificaciones/prueba', authMiddleware, adminMiddleware, notifica
 
 // Rutas de espacios
 app.get('/api/espacios', authMiddleware, espacioController.obtenerTodos.bind(espacioController));
-app.get('/api/espacios/parqueadero/:idParqueadero', authMiddleware, espacioController.obtenerEspaciosPorParqueadero.bind(espacioController));
-app.get('/api/espacios/parqueadero/:idParqueadero/disponibles', authMiddleware, espacioController.obtenerDisponibles.bind(espacioController));
+app.get('/api/espacios/parqueadero/:idParqueadero', authMiddleware, parqueaderoAccessMiddleware, espacioController.obtenerEspaciosPorParqueadero.bind(espacioController));
+app.get('/api/espacios/parqueadero/:idParqueadero/disponibles', authMiddleware, parqueaderoAccessMiddleware, espacioController.obtenerDisponibles.bind(espacioController));
 app.post('/api/espacios/parqueadero/:idParqueadero/generar', authMiddleware, adminMiddleware, espacioController.generarEspacios.bind(espacioController));
 app.post('/api/espacios', authMiddleware, adminMiddleware, espacioController.crear.bind(espacioController));
 app.put('/api/espacios/:id', authMiddleware, adminMiddleware, espacioController.actualizar.bind(espacioController));
@@ -296,19 +299,19 @@ async function insertSeedData() {
         nombre: 'Admin Principal',
         email: 'admin@parqueadero.com',
         password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
-        rol: 'admin'
+        rol: 'ADMIN'
       },
       {
         nombre: 'Juan Pérez',
         email: 'juan.perez@parqueadero.com',
         password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
-        rol: 'controlador'
+        rol: 'CONTROLADOR'
       },
       {
         nombre: 'María García',
         email: 'maria.garcia@parqueadero.com',
         password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
-        rol: 'controlador'
+        rol: 'CONTROLADOR'
       }
     ]);
 
@@ -318,7 +321,7 @@ async function insertSeedData() {
         nombre: 'Parqueadero Centro',
         direccion: 'Calle 50 #10-20, Centro',
         capacidadTotal: 100,
-        capacidadDisponible: 85,
+        capacidadDisponible: 100,
         latitud: 4.6097100,
         longitud: -74.0817500
       },
@@ -326,7 +329,7 @@ async function insertSeedData() {
         nombre: 'Parqueadero Norte',
         direccion: 'Carrera 15 #80-45, Zona Rosa',
         capacidadTotal: 150,
-        capacidadDisponible: 120,
+        capacidadDisponible: 150,
         latitud: 4.6629700,
         longitud: -74.0583600
       },
@@ -334,7 +337,7 @@ async function insertSeedData() {
         nombre: 'Parqueadero Sur',
         direccion: 'Avenida Primera #30-15, Sur',
         capacidadTotal: 80,
-        capacidadDisponible: 65,
+        capacidadDisponible: 80,
         latitud: 4.5481200,
         longitud: -74.1141300
       },
@@ -342,13 +345,54 @@ async function insertSeedData() {
         nombre: 'Parqueadero Chapinero',
         direccion: 'Calle 63 #11-50, Chapinero',
         capacidadTotal: 200,
-        capacidadDisponible: 180,
+        capacidadDisponible: 200,
         latitud: 4.6533200,
         longitud: -74.0630100
       }
     ]);
 
+    // Crear espacios para cada parqueadero
+    console.log('🅿️ Creando espacios para parqueaderos...');
+    for (const parqueadero of parqueaderos) {
+      const espacios = [];
+      for (let i = 1; i <= parqueadero.capacidadTotal; i++) {
+        espacios.push({
+          idParqueadero: parqueadero.id,
+          codigoEspacio: `E-${i}`,
+          tipoEspacio: 'ESTANDAR',
+          estado: 'LIBRE'
+        });
+      }
+      await Espacio.bulkCreate(espacios);
+      console.log(`  ✅ ${espacios.length} espacios creados para ${parqueadero.nombre}`);
+    }
+
     // Insertar vehículos
+    // TODO: Descomentar cuando se necesiten datos de vehículos de prueba
+    /*
+    const vehiculos = await Vehiculo.bulkCreate([
+      {
+        placa: 'ABC123',
+        tipo: 'carro',
+        color: 'Rojo',
+        marca: 'Toyota',
+        modelo: 'Corolla'
+      },
+      {
+        placa: 'XYZ789',
+        tipo: 'moto',
+        color: 'Negro',
+        marca: 'Yamaha',
+        modelo: 'FZ'
+      },
+      {
+        placa: 'DEF456',
+        tipo: 'carro',
+        color: 'Azul',
+        marca: 'Mazda',
+        modelo: 'CX-5'
+      }
+    ]);
 
     // Insertar algunos registros activos (entradas sin salida)
     await Registro.bulkCreate([
@@ -368,6 +412,7 @@ async function insertSeedData() {
         fecha_ingreso: new Date(Date.now() - 30 * 60 * 1000), // 30 minutos atrás
       }
     ]);
+    */
 
     console.log('✅ Datos de prueba insertados correctamente');
   } catch (error) {

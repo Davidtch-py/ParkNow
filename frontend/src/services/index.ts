@@ -18,7 +18,23 @@ export const authService = {
       if (response.data.success) {
         console.log('✅ [authService] Login exitoso, guardando datos...');
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.usuario));
+        
+        // Si es controlador, cargar parqueaderos asignados
+        const usuario = response.data.usuario;
+        if (usuario.rol === 'CONTROLADOR' || usuario.rol === 'controlador') {
+          try {
+            const parqueaderosResponse = await api.get(`/parqueaderos-usuarios/controlador/${usuario.id}`);
+            if (parqueaderosResponse.data.success && parqueaderosResponse.data.parqueaderos) {
+              usuario.parqueaderosAsignados = parqueaderosResponse.data.parqueaderos.map((p: any) => p.id);
+              console.log('📍 [authService] Parqueaderos asignados cargados:', usuario.parqueaderosAsignados);
+            }
+          } catch (error) {
+            console.warn('⚠️ [authService] No se pudieron cargar parqueaderos asignados:', error);
+            usuario.parqueaderosAsignados = [];
+          }
+        }
+        
+        localStorage.setItem('user', JSON.stringify(usuario));
         console.log('💾 [authService] Token y usuario guardados en localStorage');
       } else {
         console.log('❌ [authService] Login falló según response.data.success');
@@ -131,8 +147,16 @@ export const vehiculoService = {
 
 export const parqueaderoService = {
   async getAll() {
-    const response = await api.get('/parqueaderos');
-    return response.data;
+    try {
+      const response = await api.get('/parqueaderos');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en parqueaderoService.getAll:', error);
+      if (error.response?.data) {
+        return error.response.data;
+      }
+      return { success: false, error: error.message || 'Error de conexión' };
+    }
   },
 
   async getById(id: string | number) {
@@ -161,10 +185,20 @@ export const parqueaderoService = {
   },
 
   async getParqueaderosPorControlador(idUsuario?: string | number) {
-    const url = idUsuario 
-      ? `/parqueaderos-usuarios/controlador/${idUsuario}` 
-      : '/parqueaderos-usuarios/controlador';
-    const response = await api.get(url);
+    // Si no se proporciona ID, obtenerlo del localStorage
+    if (!idUsuario) {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        idUsuario = user.id;
+      }
+    }
+    
+    if (!idUsuario) {
+      throw new Error('No se pudo determinar el ID del usuario');
+    }
+    
+    const response = await api.get(`/parqueaderos-usuarios/controlador/${idUsuario}`);
     return response.data;
   }
 };
@@ -209,6 +243,18 @@ export const salidaService = {
 };
 
 export const reporteService = {
+  async obtenerEstadisticasDashboard(parqueaderoId?: string | number) {
+    const params = parqueaderoId ? `?parqueaderoId=${parqueaderoId}` : '';
+    const response = await api.get(`/reportes/estadisticas-dashboard${params}`);
+    return response.data;
+  },
+
+  async obtenerIngresosDiarios(parqueaderoId?: string | number) {
+    const params = parqueaderoId ? `?parqueaderoId=${parqueaderoId}` : '';
+    const response = await api.get(`/reportes/ingresos-diarios${params}`);
+    return response.data;
+  },
+
   async generarPorFecha(fechaInicio: Date, fechaFin: Date, parqueaderoId: string | null = null) {
     const params = new URLSearchParams({
       fechaInicio: fechaInicio.toISOString().split('T')[0],
@@ -389,7 +435,51 @@ export const usuarioService = {
     return response.data;
   },
 
+  // Asignación de parqueaderos a controladores
+  async asignarParqueadero(idUsuario: string | number, idParqueadero: string | number) {
+    try {
+      const response = await api.post('/parqueaderos-usuarios/asignar', {
+        idUsuario,
+        idParqueadero
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en asignarParqueadero:', error);
+      if (error.response?.data) {
+        return error.response.data;
+      }
+      return { success: false, error: error.message || 'Error de conexión' };
+    }
+  },
 
+  async desasignarParqueadero(idUsuario: string | number, idParqueadero: string | number) {
+    try {
+      const response = await api.post('/parqueaderos-usuarios/desasignar', {
+        idUsuario,
+        idParqueadero
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en desasignarParqueadero:', error);
+      if (error.response?.data) {
+        return error.response.data;
+      }
+      return { success: false, error: error.message || 'Error de conexión' };
+    }
+  },
+
+  async obtenerParqueaderosAsignados(idUsuario: string | number) {
+    try {
+      const response = await api.get(`/parqueaderos-usuarios/controlador/${idUsuario}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error en obtenerParqueaderosAsignados:', error);
+      if (error.response?.data) {
+        return error.response.data;
+      }
+      return { success: false, error: error.message || 'Error de conexión', parqueaderos: [] };
+    }
+  }
 };
 
 export const horarioService = {

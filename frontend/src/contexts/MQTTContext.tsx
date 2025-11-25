@@ -38,7 +38,7 @@ export const MQTTProvider: React.FC<MQTTProviderProps> = ({ children }) => {
       const { parqueadero } = data;
       
       // Mostrar notificación según el rol
-      if (user.rol === 'admin') {
+      if (user.rol === 'ADMIN') {
         toast.error(
           `🚨 Capacidad Crítica: ${parqueadero.nombre} - ${parqueadero.porcentaje}% disponible`,
           {
@@ -49,7 +49,7 @@ export const MQTTProvider: React.FC<MQTTProviderProps> = ({ children }) => {
             }
           }
         );
-      } else if (user.rol === 'controlador') {
+      } else if (user.rol === 'CONTROLADOR') {
         toast.warning(
           `⚠️ Alerta: ${parqueadero.nombre} tiene baja capacidad (${parqueadero.porcentaje}%)`,
           {
@@ -62,7 +62,7 @@ export const MQTTProvider: React.FC<MQTTProviderProps> = ({ children }) => {
 
     // Notificaciones de entrada de vehículo
     if (topic.includes('/entradas') && data.type === 'ENTRADA_VEHICULO') {
-      if (user.rol === 'admin' || user.rol === 'controlador') {
+      if (user.rol === 'ADMIN' || user.rol === 'CONTROLADOR') {
         toast.info(
           `🚗 Entrada: ${data.entrada.vehiculo?.placa || 'Vehículo'} en ${data.entrada.parqueadero?.nombre || 'parqueadero'}`,
           {
@@ -75,7 +75,7 @@ export const MQTTProvider: React.FC<MQTTProviderProps> = ({ children }) => {
 
     // Notificaciones de salida de vehículo
     if (topic.includes('/salidas') && data.type === 'SALIDA_VEHICULO') {
-      if (user.rol === 'admin' || user.rol === 'controlador') {
+      if (user.rol === 'ADMIN' || user.rol === 'CONTROLADOR') {
         toast.info(
           `🚙 Salida: ${data.salida.vehiculo?.placa || 'Vehículo'} - $${data.salida.monto_total || 0}`,
           {

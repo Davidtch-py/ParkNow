@@ -39,21 +39,38 @@ export class ParqueaderoUsuarioRepository {
 
   async obtenerParqueaderosPorUsuario(idUsuario) {
     try {
-      const parqueaderos = await sequelize.query(
-        `SELECT p.*, pu.fecha_asignacion
-         FROM parqueaderos p
-         INNER JOIN parqueaderos_usuarios pu ON p.id = pu.id_parqueadero
-         WHERE pu.id_usuario = $1 AND p.estado = 'A'
-         ORDER BY p.nombre`,
-        {
-          bind: [idUsuario],
-          type: sequelize.QueryTypes.SELECT
-        }
-      );
+      console.log('[DEBUG] Obteniendo parqueaderos para usuario:', idUsuario);
+      
+      // Usar el modelo de Sequelize para obtener conversión automática a camelCase
+      const asignaciones = await ParqueaderoUsuario.findAll({
+        where: { idUsuario },
+        include: [{
+          model: Parqueadero,
+          as: 'parqueadero',
+          required: true
+        }],
+        order: [[{ model: Parqueadero, as: 'parqueadero' }, 'nombre', 'ASC']]
+      });
+      
+      // Extraer solo los parqueaderos con sus datos en camelCase
+      const parqueaderos = asignaciones.map(asig => {
+        const p = asig.parqueadero.toJSON();
+        return {
+          ...p,
+          fechaAsignacion: asig.fechaAsignacion
+        };
+      });
+      
+      console.log('[DEBUG] Parqueaderos encontrados:', parqueaderos.length);
+      if (parqueaderos.length > 0) {
+        console.log('[DEBUG] Primer parqueadero:', parqueaderos[0]);
+      }
       return parqueaderos;
     } catch (error) {
       console.error('[ERROR] Error al obtener parqueaderos por usuario:', error);
-      throw error;
+      console.error('[ERROR] Stack:', error.stack);
+      // Retornar array vacío en lugar de lanzar error
+      return [];
     }
   }
 

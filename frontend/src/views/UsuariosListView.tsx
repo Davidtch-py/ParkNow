@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, X, CheckCircle, UserCheck, FileEdit } from 'lucide-react';
+import { Search, Plus, Trash2, X, CheckCircle, UserCheck, FileEdit, Building2 } from 'lucide-react';
 import { usuarioService } from '../services/index';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
+import AsignarParqueaderosModal from '../components/AsignarParqueaderosModal';
 
 interface Usuario {
   id: number;
   nombre: string;
   email: string;
-  rol: 'admin' | 'controlador';
+  rol: 'ADMIN' | 'CONTROLADOR';
   createdAt: string;
   updatedAt: string;
 }
@@ -21,11 +22,12 @@ const UsuariosListView = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAsignarModal, setShowAsignarModal] = useState(false);
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     password: '',
-    rol: 'controlador' as 'admin' | 'controlador'
+    rol: 'CONTROLADOR' as 'ADMIN' | 'CONTROLADOR'
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRol, setFilterRol] = useState('todos');
@@ -81,7 +83,7 @@ const UsuariosListView = () => {
         id: 1,
         nombre: 'Administrador Principal',
         email: 'admin@parqueadero.com',
-        rol: 'admin',
+        rol: 'ADMIN',
         createdAt: '2024-01-15T00:00:00.000Z',
         updatedAt: '2024-01-15T00:00:00.000Z'
       },
@@ -89,7 +91,7 @@ const UsuariosListView = () => {
         id: 2,
         nombre: 'Juan Pérez',
         email: 'juan.perez@parqueadero.com',
-        rol: 'controlador',
+        rol: 'CONTROLADOR',
         createdAt: '2024-02-01T00:00:00.000Z',
         updatedAt: '2024-02-01T00:00:00.000Z'
       },
@@ -97,7 +99,7 @@ const UsuariosListView = () => {
         id: 3,
         nombre: 'María García',
         email: 'maria.garcia@parqueadero.com',
-        rol: 'controlador',
+        rol: 'CONTROLADOR',
         createdAt: '2024-02-15T00:00:00.000Z',
         updatedAt: '2024-02-15T00:00:00.000Z'
       }
@@ -192,6 +194,15 @@ const UsuariosListView = () => {
             };
             setUsuarios([...usuarios, nuevoUsuario]);
             toast.success('Usuario creado exitosamente');
+            
+            // Si es un controlador, abrir modal de asignación de parqueaderos
+            if (formData.rol === 'CONTROLADOR') {
+              resetForm();
+              setSelectedUser(nuevoUsuario);
+              setShowAsignarModal(true);
+              toast.info('Ahora asigna parqueaderos a este controlador');
+              return; // No cerrar el modal aún
+            }
           } else {
             toast.error(result.error || 'Error al crear usuario');
           }
@@ -224,7 +235,7 @@ const UsuariosListView = () => {
       nombre: '',
       email: '',
       password: '',
-      rol: 'controlador'
+      rol: 'CONTROLADOR'
     });
     setShowModal(false);
     setIsEdit(false);
@@ -246,6 +257,11 @@ const UsuariosListView = () => {
   const handleDelete = (usuario: Usuario) => {
     setSelectedUser(usuario);
     setShowDeleteModal(true);
+  };
+
+  const handleAsignarParqueaderos = (usuario: Usuario) => {
+    setSelectedUser(usuario);
+    setShowAsignarModal(true);
   };
 
   const confirmDelete = async () => {
@@ -298,7 +314,7 @@ const UsuariosListView = () => {
   };
 
   const RolBadge = ({ rol }: { rol: string }) => {
-    return rol === 'admin' ? (
+    return rol === 'ADMIN' ? (
       <span className="px-2.5 py-0.5 text-xs font-medium rounded border bg-blue-100 border-blue-300 text-blue-700">
         Administrador
       </span>
@@ -357,8 +373,8 @@ const UsuariosListView = () => {
               onChange={(e) => setFilterRol(e.target.value)}
             >
               <option value="todos">Todos los roles</option>
-              <option value="admin">Administradores</option>
-              <option value="controlador">Controladores</option>
+              <option value="ADMIN">Administradores</option>
+              <option value="CONTROLADOR">Controladores</option>
             </select>
             <div className="text-sm text-gray-500 flex items-center">
               Total: {filteredUsuarios.length} usuarios
@@ -433,6 +449,16 @@ const UsuariosListView = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="relative inline-block text-left">
                         <div className="flex space-x-2">
+                          {usuario.rol === 'CONTROLADOR' && (
+                            <button
+                              onClick={() => handleAsignarParqueaderos(usuario)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Asignar parqueaderos"
+                            >
+                              <Building2 className="size-4" />
+                            </button>
+                          )}
+                          
                           <button
                             onClick={() => handleEdit(usuario)}
                             className="text-blue-600 hover:text-blue-900"
@@ -467,8 +493,10 @@ const UsuariosListView = () => {
 
       {/* Modal para crear/editar usuario */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50" onClick={resetForm}></div>
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md pointer-events-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               {isEdit ? 'Editar Usuario' : 'Nuevo Usuario'}
             </h3>
@@ -527,10 +555,10 @@ const UsuariosListView = () => {
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.rol}
-                  onChange={(e) => setFormData({ ...formData, rol: e.target.value as 'admin' | 'controlador' })}
+                  onChange={(e) => setFormData({ ...formData, rol: e.target.value as 'ADMIN' | 'CONTROLADOR' })}
                 >
-                  <option value="controlador">Controlador</option>
-                  <option value="admin">Administrador</option>
+                  <option value="CONTROLADOR">Controlador</option>
+                  <option value="ADMIN">Administrador</option>
                 </select>
               </div>
 
@@ -550,14 +578,17 @@ const UsuariosListView = () => {
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Modal de confirmación para eliminar */}
       {showDeleteModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50" onClick={() => setShowDeleteModal(false)}></div>
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md pointer-events-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               Confirmar Eliminación
             </h3>
@@ -579,9 +610,21 @@ const UsuariosListView = () => {
                 Eliminar
               </button>
             </div>
+            </div>
           </div>
-        </div>
+        </>
       )}
+
+      {/* Modal para asignar parqueaderos */}
+      <AsignarParqueaderosModal
+        show={showAsignarModal}
+        onHide={() => setShowAsignarModal(false)}
+        usuario={selectedUser}
+        onSuccess={() => {
+          toast.success('Parqueaderos asignados correctamente');
+          cargarUsuarios();
+        }}
+      />
     </div>
   );
 };

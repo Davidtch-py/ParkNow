@@ -84,11 +84,14 @@ export class UsuarioController {
       // Hash de la contraseña
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // Normalizar rol a mayúsculas
+      const rolNormalizado = (rol || 'controlador').toUpperCase();
+
       const nuevoUsuario = await usuarioRepository.create({
         nombre,
         email,
         password: hashedPassword,
-        rol: rol || 'controlador'
+        rol: rolNormalizado
       });
 
       const { password: _, ...usuarioSinPassword } = nuevoUsuario.toJSON ? nuevoUsuario.toJSON() : nuevoUsuario;
@@ -157,10 +160,13 @@ export class UsuarioController {
         }
       }
 
+      // Normalizar rol a mayúsculas si se proporciona
+      const rolNormalizado = rol ? rol.toUpperCase() : usuario.rol;
+
       const datosActualizacion = {
         nombre: nombre || usuario.nombre,
         email: email || usuario.email,
-        rol: rol || usuario.rol
+        rol: rolNormalizado
       };
 
       // Solo hash la contraseña si se proporciona una nueva

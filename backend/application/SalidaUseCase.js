@@ -54,24 +54,19 @@ export class SalidaUseCase {
       }
       console.log('✅ ParqueaderoId:', parqueaderoId);
 
-      // Buscar la tarifa vigente (opcional por ahora)
-      const tarifa = await this.tarifaRepository.findByParqueaderoAndTipo(
-        parqueaderoId,
-        vehiculo.tipo
-      );
-      
-      let montoTotal = 0;
+      // SIEMPRE usar el monto que viene del frontend (ya calculado correctamente)
       const fechaSalida = new Date();
       const tiempoTotal = Math.ceil((fechaSalida - new Date(entrada.fecha_ingreso)) / (1000 * 60)); // en minutos
       
-      if (tarifa) {
-        console.log('✅ Tarifa encontrada, tarifaHora:', tarifa.tarifaHora);
-        montoTotal = tarifa.calcularMonto ? tarifa.calcularMonto(tiempoTotal) : ((tiempoTotal / 60) * tarifa.tarifaHora).toFixed(2);
-        console.log('✅ Tiempo:', tiempoTotal, 'min, Monto:', montoTotal);
-      } else {
-        console.log('⚠️ No se encontró tarifa, se registrará salida con monto 0');
-        console.log('✅ Tiempo:', tiempoTotal, 'min, Monto: 0');
-      }
+      console.log('💰 [DEBUG] salidaData recibido:', JSON.stringify(salidaData, null, 2));
+      console.log('💰 [DEBUG] salidaData.montoTotal:', salidaData.montoTotal);
+      console.log('💰 [DEBUG] salidaData.monto_total:', salidaData.monto_total);
+      
+      // El frontend ya calculó el monto correctamente, usarlo directamente
+      let montoTotal = parseFloat(salidaData.montoTotal || salidaData.monto_total || 0);
+      
+      console.log('💰 [DEBUG] Monto final a guardar:', montoTotal);
+      console.log('✅ Usando monto del frontend (ya calculado correctamente):', montoTotal);
 
       // Liberar el espacio si está asignado
       if (entrada.id_espacio) {

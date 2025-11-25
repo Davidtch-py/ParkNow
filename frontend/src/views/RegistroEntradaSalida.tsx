@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import ReciboSalida from '../components/ReciboSalida';
 import { validaciones } from '../utils/validations';
+import { useParqueaderosPermitidos } from '../hooks/useParqueaderosPermitidos';
 
 interface Vehiculo {
   id: number;
@@ -46,7 +47,10 @@ const RegistroEntradaSalida = () => {
   const [searchVehicle, setSearchVehicle] = useState('');
   const [filteredVehiculos, setFilteredVehiculos] = useState<Vehiculo[]>([]);
 
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  
+  // Filtrar parqueaderos según permisos del usuario
+  const parqueaderosPermitidos = useParqueaderosPermitidos(parqueaderos);
 
   // Estados para formulario de entrada
   const [formEntrada, setFormEntrada] = useState({
@@ -117,7 +121,7 @@ const RegistroEntradaSalida = () => {
               propietario: entrada.vehiculo?.propietario || entrada.Vehiculo?.propietario || 'N/A',
               parqueaderoId: entrada.espacio?.parqueadero?.id || entrada.parqueaderoId || 0,
               nombreParqueadero: entrada.espacio?.parqueadero?.nombre || entrada.Parqueadero?.nombre || 'N/A',
-              espacioAsignado: entrada.id_espacio ? `Espacio ${entrada.id_espacio}` : 'Sin asignar',
+              espacioAsignado: entrada.espacio?.codigo_espacio || entrada.espacio?.codigoEspacio || (entrada.id_espacio ? `E-${entrada.id_espacio}` : 'Sin asignar'),
               fechaHoraEntrada: entrada.fecha_ingreso || entrada.fechaHoraEntrada,
               controlador: entrada.controlador?.nombre || entrada.Usuario?.nombre || 'N/A'
             };
@@ -239,7 +243,7 @@ const RegistroEntradaSalida = () => {
       const entradaData = {
         vehiculoId: parseInt(formEntrada.vehiculoId),
         parqueaderoId: parseInt(formEntrada.parqueaderoId),
-        espacioAsignado: formEntrada.espacioAsignado || `AUTO-${Date.now()}`,
+        espacioAsignado: formEntrada.espacioAsignado || '', // Dejar vacío para asignación automática
         observaciones: formEntrada.observaciones
       };
 
@@ -336,6 +340,9 @@ const RegistroEntradaSalida = () => {
         observaciones: observacionesSalida,
         montoTotal: datosRecibo.costo
       };
+
+      console.log('💰 [FRONTEND] Enviando salida con monto:', datosRecibo.costo);
+      console.log('💰 [FRONTEND] salidaData completo:', salidaData);
 
       const result = await salidaService.registrar(salidaData);
       
@@ -592,7 +599,7 @@ const RegistroEntradaSalida = () => {
                       onChange={(e) => setFormEntrada({...formEntrada, parqueaderoId: e.target.value})}
                     >
                       <option value="">Selecciona un parqueadero</option>
-                      {parqueaderos.map((parqueadero) => (
+                      {parqueaderosPermitidos.map((parqueadero) => (
                         <option key={parqueadero.id} value={parqueadero.id}>
                           {parqueadero.nombre} - {parqueadero.capacidadDisponible} espacios disponibles
                         </option>
@@ -712,7 +719,7 @@ const RegistroEntradaSalida = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Selecciona un parqueadero</option>
-                {parqueaderos.map((parqueadero) => (
+                {parqueaderosPermitidos.map((parqueadero) => (
                   <option key={parqueadero.id} value={parqueadero.id}>
                     {parqueadero.nombre} ({parqueadero.capacidadDisponible}/{parqueadero.capacidadTotal} disponibles)
                   </option>

@@ -64,7 +64,34 @@ export class ParqueaderoController {
       });
 
       if (result.success) {
-          res.status(201).json(result);
+        // Crear espacios automáticamente para el nuevo parqueadero
+        try {
+          const { sequelize } = await import('../persistence/models.js');
+          const espaciosValues = [];
+          const espaciosPlaceholders = [];
+          
+          for (let i = 1; i <= capacidadTotal; i++) {
+            const idx = (i - 1) * 3;
+            espaciosPlaceholders.push(`($${idx + 1}, $${idx + 2}, $${idx + 3}, NOW(), NOW())`);
+            espaciosValues.push(`E-${String(i).padStart(3, '0')}`, 'LIBRE', result.parqueadero.id);
+          }
+          
+          await sequelize.query(
+            `INSERT INTO espacios (codigo_espacio, estado, id_parqueadero, created_at, updated_at) 
+             VALUES ${espaciosPlaceholders.join(', ')}`,
+            {
+              bind: espaciosValues,
+              type: sequelize.QueryTypes.INSERT
+            }
+          );
+          
+          console.log(`✅ ${capacidadTotal} espacios creados automáticamente para ${nombre}`);
+        } catch (espacioError) {
+          console.error('⚠️ Error creando espacios automáticamente:', espacioError.message);
+          // No fallar la creación del parqueadero si falla la creación de espacios
+        }
+        
+        res.status(201).json(result);
       } else {
         res.status(400).json(result);
       }
